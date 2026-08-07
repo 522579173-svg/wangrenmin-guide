@@ -773,7 +773,9 @@ function reverseGeo(lat, lng){
     var s = loadSettings();
     if(s.amapProxy){
       // 高德安全代理（Vercel /api/geocode 或 PHP）：Key 在服务器端
-      fetch(s.amapProxy + (s.amapProxy.indexOf("?") > -1 ? "&" : "?") + "lat=" + lat + "&lng=" + lng)
+      var u = s.amapProxy;
+      if(/\/api\/(deepseek|geocode)$/.test(u)){ u += ".js"; }
+      fetch(u + (u.indexOf("?") > -1 ? "&" : "?") + "lat=" + lat + "&lng=" + lng)
         .then(function(r){ return r.json(); })
         .then(function(d){
           if(d && d.data && d.data.regeocode){
@@ -840,6 +842,8 @@ function deepseekChat(prompt){
   if(s.proxyUrl){
     // 安全代理模式（Vercel /api/deepseek 或 PHP proxy）：Key 由服务器端环境变量处理，前端可不再传 Key
     url = s.proxyUrl;
+    // 兼容：代理地址若以 /api/deepseek 或 /api/geocode 结尾（不带.js），自动补 .js
+    if(/\/api\/(deepseek|geocode)$/.test(url)){ url += ".js"; }
     if(s.deepseekKey) headers["Authorization"] = "Bearer "+s.deepseekKey;
   } else {
     // 直连模式：必须在前端填 Key
