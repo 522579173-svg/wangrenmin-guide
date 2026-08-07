@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f2a43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="景点讲解">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>全国景点讲解</title>
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --ink:#1c2733;
+    --sub:#6b7684;
+    --brand:#0f2a43;
+    --accent:#c9a227;
+    --line:#e6eaf0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6;
+  }
+  #app{max-width:640px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;}
+
+  /* 顶部 */
+  header{
+    background:linear-gradient(135deg,#0f2a43,#1d4a6e);
+    color:#fff;padding:18px 16px 16px;position:sticky;top:0;z-index:10;position:relative;
+  }
+  header h1{font-size:20px;font-weight:700;letter-spacing:1px;padding-right:52px;}
+  header h1 span{color:var(--accent);}
+  header p{font-size:12px;opacity:.8;margin-top:2px;}
+  .back{background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:4px 8px 4px 0;margin-bottom:6px;}
+  #settingsBtn{
+    position:absolute;right:12px;top:12px;background:rgba(255,255,255,.16);border:none;color:#fff;
+    font-size:18px;width:40px;height:40px;border-radius:12px;cursor:pointer;line-height:1;
+  }
+  #settingsBtn:active{background:rgba(255,255,255,.28);}
+
+  /* 页面容器 */
+  .page{flex:1;padding:14px 14px 90px;display:none;}
+  .page.active{display:block;}
+
+  .section-title{font-size:15px;font-weight:700;margin:14px 2px 10px;color:var(--ink);}
+  .section-title small{font-weight:400;color:var(--sub);font-size:12px;}
+
+  /* 城市卡片 */
+  .city-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .city-card{
+    background:var(--card);border-radius:14px;padding:14px 6px;text-align:center;
+    box-shadow:0 1px 4px rgba(15,42,67,.06);cursor:pointer;border:1px solid var(--line);
+    transition:transform .12s;
+  }
+  .city-card:active{transform:scale(.96);}
+  .city-card .ico{font-size:30px;line-height:1;}
+  .city-card .nm{font-size:15px;font-weight:600;margin-top:6px;}
+  .city-card .ct{font-size:11px;color:var(--sub);margin-top:2px;}
+
+  /* 景点卡片 */
+  .spot-card{
+    background:var(--card);border-radius:14px;padding:14px 14px 12px;margin-bottom:10px;
+    box-shadow:0 1px 4px rgba(15,42,67,.06);cursor:pointer;border:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+  }
+  .spot-card:active{background:#f8fafc;}
+  .spot-card .t{font-size:16px;font-weight:600;}
+  .spot-card .d{font-size:12px;color:var(--sub);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .spot-card .arr{color:#b8c2cc;font-size:20px;flex-shrink:0;}
+
+  /* 详情 */
+  .detail-head{background:linear-gradient(135deg,#1d4a6e,#2e6a8f);color:#fff;border-radius:16px;padding:18px 16px;margin-bottom:14px;}
+  .detail-head .name{font-size:22px;font-weight:700;}
+  .detail-head .loc{font-size:13px;opacity:.9;margin-top:4px;}
+  .detail-head .tag{display:inline-block;margin-top:10px;font-size:11px;background:rgba(255,255,255,.18);border-radius:20px;padding:3px 12px;}
+
+  .panel{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--line);}
+  .panel h3{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+
+  .intro{font-size:14px;color:#3a4654;}
+  .script{font-size:14.5px;color:#333;line-height:2;text-align:justify;}
+
+  /* 播放器 */
+  .player{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:640px;background:#fff;border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    z-index:20;box-shadow:0 -4px 16px rgba(15,42,67,.10);
+    display:none;
+  }
+  .player.show{display:block;}
+  .player .row{display:flex;align-items:center;gap:10px;}
+  .btn-play{
+    width:52px;height:52px;border-radius:50%;border:none;flex-shrink:0;
+    background:linear-gradient(135deg,#0f2a43,#1d4a6e);color:#fff;font-size:20px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 10px rgba(15,42,67,.3);
+  }
+  .btn-play.playing{background:linear-gradient(135deg,#c9a227,#a87f14);}
+  .player .info{flex:1;min-width:0;}
+  .player .info .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .player .info .s{font-size:11px;color:var(--sub);}
+  .player .ctrl{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .player .rate{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--sub);}
+  .rate-btn{background:#eef2f6;border:none;border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--ink);}
+  .rate-btn.on{background:var(--brand);color:#fff;}
+  .btn-stop{margin-left:auto;background:none;border:none;color:var(--sub);font-size:12px;cursor:pointer;padding:4px;}
+
+  /* 搜索 */
+  .search{
+    display:flex;background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:4px;
+    border:1px solid var(--line);align-items:center;gap:8px;
+  }
+  .search input{border:none;outline:none;flex:1;font-size:14px;background:transparent;color:var(--ink);}
+  .search .go{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:13px;cursor:pointer;flex-shrink:0;}
+
+  .empty{text-align:center;color:var(--sub);font-size:13px;padding:40px 0;}
+  .toast{
+    position:fixed;top:60px;left:50%;transform:translateX(-50%);
+    background:rgba(15,42,67,.92);color:#fff;font-size:13px;padding:8px 18px;border-radius:20px;
+    z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:86%;text-align:center;
+  }
+  .toast.show{opacity:1;}
+
+  /* ===== 智能导览（仿真人导游 · 走到哪讲到哪） ===== */
+  .guide-entry,.free-entry{
+    background:linear-gradient(135deg,#7a3e2e,#b05a3b);color:#fff;border-radius:16px;
+    padding:15px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(122,62,46,.25);border:none;width:100%;text-align:left;
+    transition:transform .12s;
+  }
+  .free-entry{background:linear-gradient(135deg,#1d4a6e,#2e6a8f);box-shadow:0 4px 14px rgba(29,74,110,.28);}
+  .guide-entry:active,.free-entry:active{transform:scale(.98);}
+  .guide-entry .ge-ico,.free-entry .fe-ico{font-size:32px;background:rgba(255,255,255,.16);width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .guide-entry .ge-t,.free-entry .fe-t{font-size:16px;font-weight:700;}
+  .guide-entry .ge-d,.free-entry .fe-d{font-size:12px;opacity:.92;margin-top:3px;line-height:1.5;}
+  .guide-entry .ge-arr,.free-entry .fe-arr{font-size:22px;opacity:.7;margin-left:auto;flex-shrink:0;}
+
+  .area-card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--line);cursor:pointer;display:flex;gap:12px;align-items:center;}
+  .area-card:active{background:#f8fafc;}
+  .area-card .ac-ico{font-size:32px;}
+  .area-card .ac-b{flex:1;min-width:0;}
+  .area-card .ac-n{font-size:16px;font-weight:700;}
+  .area-card .ac-d{font-size:12px;color:var(--sub);margin-top:2px;}
+  .area-card .ac-go{color:#b8c2cc;font-size:20px;flex-shrink:0;}
+
+  .map-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 10px;}
+  .map-title{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .map-modes{display:flex;gap:5px;flex-shrink:0;}
+  .mode-btn{background:#eef2f6;border:none;border-radius:10px;padding:5px 9px;font-size:12px;cursor:pointer;color:var(--ink);}
+  .mode-btn.on{background:var(--brand);color:#fff;}
+
+  .map-wrap{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 2px 10px rgba(15,42,67,.08);}
+  #mapSvg{width:100%;display:block;background:#f7f1e3;cursor:crosshair;}
+
+  .guide-bubble{position:absolute;left:8px;right:8px;bottom:8px;background:rgba(15,42,67,.94);color:#fff;border-radius:14px;padding:10px 12px;z-index:6;animation:pop .22s ease;pointer-events:none;}
+  @keyframes pop{from{transform:translateY(8px);opacity:0;}to{transform:none;opacity:1;}}
+  .gb-head{font-size:11px;opacity:.85;letter-spacing:1px;}
+  .gb-name{font-size:15px;font-weight:700;color:#f5d574;margin-top:2px;}
+  .gb-text{font-size:12px;line-height:1.7;margin-top:4px;max-height:72px;overflow:auto;color:#f2f4f7;}
+
+  .map-status{display:flex;flex-direction:column;gap:7px;margin-top:10px;background:#fff;border-radius:12px;padding:11px 13px;border:1px solid var(--line);}
+  .st-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;}
+  .st-row b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  .map-controls{display:flex;gap:10px;margin-top:10px;}
+  .gc-btn{flex:1;padding:11px 0;border-radius:12px;border:none;font-size:14px;cursor:pointer;background:#eef2f6;color:var(--ink);}
+  .gc-btn.main{background:linear-gradient(135deg,#0f2a43,#1d4a6e);color:#fff;}
+  .gc-btn.main.playing{background:linear-gradient(135deg,#c9a227,#a87f14);}
+  .gc-btn.main[disabled]{opacity:.5;}
+
+  /* ===== 智能自由导览（AI自动补全） ===== */
+  .free-status{background:var(--card);border-radius:14px;padding:8px 16px;margin-bottom:12px;border:1px solid var(--line);}
+  .fs-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:7px 0;border-bottom:1px dashed #eef1f5;}
+  .fs-row:last-child{border-bottom:none;}
+  .fs-label{color:var(--sub);flex-shrink:0;}
+  .fs-row b{text-align:right;font-weight:600;word-break:break-all;}
+
+  .fr-card{background:var(--card);border-radius:14px;padding:14px 16px;margin-top:12px;border:1px solid var(--line);}
+  .fr-head{font-size:11px;color:var(--sub);letter-spacing:1px;}
+  .fr-name{font-size:17px;font-weight:700;margin-top:3px;}
+  .fr-badge{display:inline-block;margin-top:6px;font-size:11px;background:#eef2f6;border-radius:20px;padding:2px 10px;color:var(--brand);}
+  .fr-badge.ai{background:#fff3e0;color:#a05a12;}
+  .fr-badge.lib{background:#e8f5e9;color:#2e7d32;}
+  .fr-desc{font-size:13px;color:#3a4654;margin-top:8px;line-height:1.8;max-height:150px;overflow:auto;}
+  .fr-addr{font-size:12px;color:var(--sub);margin-top:6px;}
+
+  .lib-item{background:var(--card);border-radius:12px;padding:11px 13px;margin-bottom:8px;border:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+  .lib-item .li-b{flex:1;min-width:0;}
+  .lib-item .li-n{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lib-item .li-m{font-size:11px;color:var(--sub);margin-top:2px;}
+  .lib-item .li-btn{background:#eef2f6;border:none;border-radius:9px;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;}
+  .lib-item .li-btn.main{background:var(--brand);color:#fff;}
+
+  /* 设置页 */
+  .set-field{margin-bottom:14px;}
+  .set-field label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;}
+  .set-field input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;outline:none;background:#fbfcfe;color:var(--ink);}
+  .set-field input:focus{border-color:var(--brand);}
+  .hint{font-size:11.5px;color:var(--sub);line-height:1.7;margin-top:10px;background:#f7f9fc;border-radius:10px;padding:10px 12px;}
+  .hint a{color:#1d6fb8;}
+
+  .install-row{margin-top:14px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="back" id="backBtn" style="display:none;">‹ 返回</button>
+    <h1>📖 全国景点<span>讲解</span></h1>
+    <p>随身中文语音导游 · 智能AI补全</p>
+    <button id="settingsBtn" title="设置">⚙️</button>
+  </header>
+
+  <!-- 首页 -->
+  <div class="page active" id="page-home">
+    <div class="search">
+      <span>🔍</span>
+      <input id="kw" type="search" placeholder="搜索景点 / 城市，如：故宫、杭州">
+      <button class="go" id="searchBtn">搜索</button>
+    </div>
+    <button class="guide-entry" id="guideEntry">
+      <div class="ge-ico">🎙️</div>
+      <div>
+        <div class="ge-t">仿真人导游 · 走到哪讲到哪</div>
+        <div class="ge-d">景区手绘地图 + 定位自动触发讲解，进入景点自动开讲，像真人导游跟随</div>
+      </div>
+      <div class="ge-arr">›</div>
+    </button>
+    <button class="free-entry" id="freeEntry">
+      <div class="fe-ico">🧠</div>
+      <div>
+        <div class="fe-t">智能自由导览 · AI 自动补全</div>
+        <div class="fe-d">GPS定位自动识别地点；陌生景点 AI 当场生成讲解并朗读，下次到访自动开讲</div>
+      </div>
+      <div class="fe-arr">›</div>
+    </button>
+    <div class="section-title">按城市浏览 <small id="cityCount"></small></div>
+    <div class="city-grid" id="cityGrid"></div>
+    <div class="install-row" id="installRow" style="display:none;">
+      <button class="gc-btn main" id="installBtn">📲 安装到手机桌面（像App一样使用）</button>
+    </div>
+  </div>
+
+  <!-- 列表页 -->
+  <div class="page" id="page-list">
+    <div class="section-title" id="listTitle">景点列表</div>
+    <div id="spotList"></div>
+  </div>
+
+  <!-- 详情页 -->
+  <div class="page" id="page-detail">
+    <div id="detailBox"></div>
+  </div>
+
+  <!-- 智能导览：选景区 -->
+  <div class="page" id="page-guide">
+    <div class="section-title">🎙️ 仿真人导游 <small>选择景区 · 走到哪讲到哪</small></div>
+    <div id="guideAreaList"></div>
+  </div>
+
+  <!-- 智能导览：景区地图 -->
+  <div class="page" id="page-map">
+    <div class="map-top">
+      <div class="map-title" id="mapTitle">景区地图</div>
+      <div class="map-modes" id="mapModes"></div>
+    </div>
+    <div class="map-wrap" id="mapWrap">
+      <svg id="mapSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="guide-bubble" id="guideBubble" style="display:none;">
+        <div class="gb-head">🎙️ 导游正在讲解</div>
+        <div class="gb-name" id="gbName"></div>
+        <div class="gb-text" id="gbText"></div>
+      </div>
+    </div>
+    <div class="map-status">
+      <div class="st-row"><b id="stNear">📍 最近景点：--</b><span id="stDist">--</span></div>
+      <div class="st-row"><span id="stState">🚶 准备出发</span><span id="stDone">已听 0/0</span></div>
+    </div>
+    <div class="map-controls">
+      <button class="gc-btn main" id="gStart">▶ 开始游览</button>
+      <button class="gc-btn" id="gReset">🔄 重置</button>
+    </div>
+  </div>
+
+  <!-- 智能自由导览 -->
+  <div class="page" id="page-free">
+    <div class="section-title">🧠 智能自由导览 <small>GPS + AI 自动补全</small></div>
+    <div class="free-status">
+      <div class="fs-row"><span class="fs-label">📍 定位状态</span><b id="fsState">未定位</b></div>
+      <div class="fs-row"><span class="fs-label">🗺️ 当前地点</span><b id="fsPlace">--</b></div>
+      <div class="fs-row"><span class="fs-label">🧭 坐标</span><b id="fsCoord">--</b></div>
+      <div class="fs-row"><span class="fs-label">📚 讲解来源</span><b id="fsSource">--</b></div>
+    </div>
+    <div class="map-controls">
+      <button class="gc-btn main" id="freeStart">📍 开始定位跟随</button>
+      <button class="gc-btn" id="freeStop">⏹ 停止</button>
+    </div>
+    <div class="section-title">🧪 模拟演示 <small>没GPS / 本地文件也能体验完整流程</small></div>
+    <div class="search">
+      <span>🗺️</span>
+      <input id="freeSimKw" type="text" placeholder="输入地名，如：西安大雁塔 / 杭州灵隐寺">
+      <button class="go" id="freeSimBtn">生成</button>
+    </div>
+    <div id="freeResult"></div>
+    <div class="section-title">📚 我的讲解库 <small id="libCount"></small></div>
+    <div id="freeLib"></div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="page" id="page-settings">
+    <div class="section-title">🔑 API 设置 <small>仅保存在本机浏览器</small></div>
+    <div class="panel">
+      <div class="set-field">
+        <label>DeepSeek API Key（可选 · 仅直连模式用；用 Vercel 安全代理则留空）</label>
+        <input id="setDsk" type="password" placeholder="sk-...（用安全代理可留空）">
+      </div>
+      <div class="set-field">
+        <label>DeepSeek 代理地址（Vercel 安全代理，Key 藏在服务器，推荐）</label>
+        <input id="setProxy" type="text" placeholder="https://你的域名/api/deepseek 或 /api/deepseek">
+      </div>
+      <div class="set-field">
+        <label>高德逆地理编码 Key（可选 · 定位识别更准，lbs.amap.com 免费注册）</label>
+        <input id="setAmap" type="text" placeholder="不填则用 OpenStreetMap 兜底">
+      </div>
+      <div class="set-field">
+        <label>高德代理地址（可选 · Key 也藏到服务器，推荐）</label>
+        <input id="setAmapProxy" type="text" placeholder="https://你的域名/api/geocode 或 /api/geocode">
+      </div>
+      <div class="map-controls">
+        <button class="gc-btn main" id="saveSettings">💾 保存设置</button>
+      </div>
+      <div class="hint">
+        ① Key 有两种保存方式：<br>
+        <b>安全模式（推荐）</b>：部署到 Vercel 后，把 Key 填进 Vercel 环境变量（DEEPSEEK_KEY / AMAP_KEY），前端代理地址填 <b>/api/deepseek</b>、<b>/api/geocode</b>，浏览器里完全不出现 Key。<br>
+        <b>直连模式</b>：把 Key 填在本页（仅存本机浏览器 localStorage，上传不会发送到任何服务器），适合本地体验。<br>
+        ② 高德 Key 注册：lbs.amap.com → 控制台 → 创建应用 → 添加“Web服务”Key（个人开发者免费）。<br>
+        ③ 真 GPS 需要 HTTPS：部署到 Vercel 后手机访问即可。<br>
+        ④ 本地双击 index.html 无定位权限，可用“模拟演示”体验完整流程。
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部播放器 -->
+  <div class="player" id="player">
+    <div class="row">
+      <button class="btn-play" id="btnPlay">▶</button>
+      <div class="info">
+        <div class="t" id="plTitle">景点讲解</div>
+        <div class="s" id="plStatus">点击播放</div>
+      </div>
+      <button class="btn-stop" id="btnStop">⏹ 停止</button>
+    </div>
+    <div class="ctrl">
+      <span class="rate">语速</span>
+      <button class="rate-btn" data-rate="0.8">0.8x</button>
+      <button class="rate-btn on" data-rate="1">1.0x</button>
+      <button class="rate-btn" data-rate="1.2">1.2x</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+ *  APP 数据区：想增加景点/城市，按同样格式往下面数组里加即可
+ *  每个景点字段：
+ *    id       唯一标识
+ *    name     景点名称
+ *    location 所在位置
+ *    tag      小标签（如 5A景区 / 世界遗产）
+ *    summary  一句话简介（列表页显示）
+ *    intro    详细简介（详情页显示）
+ *    script   讲解词（点击播放会朗读这段文字）
+ *    tip      游览小贴士（可选）
+ * ============================================================ */
+var APP_DATA = [
+  {
+    id: "beijing", name: "北京", icon: "🏛️", region: "华北",
+    spots: [
+      {
+        id: "gugong", name: "故宫博物院", location: "北京市东城区景山前街4号", tag: "世界遗产 · 5A",
+        summary: "明清两代皇宫，世界现存最大木结构古建筑群。",
+        intro: "故宫旧称紫禁城，是明清两代的皇家宫殿，位于北京中轴线的中心，始建于明永乐四年（1406年），历时14年建成，距今已有六百多年历史。它是世界上现存规模最大、保存最完整的木质结构古建筑群之一，1987年被列入世界文化遗产名录。",
+        script: "各位朋友，欢迎来到故宫博物院。故宫，旧称紫禁城，是明清两代的皇家宫殿。它始建于明朝永乐四年，也就是公元一四零六年，历时十四年才基本建成。六百多年来，这里一共居住过二十四位皇帝。故宫占地七十二万平方米，有房屋九千多间，四面环绕着十米高的城墙和五十二米宽的护城河。太和殿、中和殿、保和殿三大殿，是举行大典和朝会的中心；而后三宫与御花园，则是皇帝和后妃生活起居的地方。漫步在这红墙黄瓦之间，每一块砖石都承载着历史的记忆。参观时请您顺着中轴线由南向北游览，既省体力，又能把故宫最核心的精华看个遍。祝您在故宫度过一段难忘的时光。",
+        tip: "门票需提前在官方渠道实名预约，周一闭馆（法定节假日除外）。"
+      },
+      {
+        id: "badaling", name: "八达岭长城", location: "北京市延庆区G6京藏高速58号出口", tag: "世界遗产 · 5A",
+        summary: "明长城中保存最完好、最具代表性的一段。",
+        intro: "八达岭长城是明长城中保存最完好、最具代表性的一段，位于北京市延庆区，地势险要，史称“天下九塞之一”，是万里长城的精华所在，也是接待中外游人最多的一段长城。",
+        script: "各位朋友，我们现在站的地方，就是八达岭长城。长城修筑的历史，可以上溯到两千多年前的春秋战国时期。当时各国为了互相防御，都在形势险要的地方修筑长城。秦始皇统一六国之后，把各国的长城连接起来，才有了万里长城的雏形。我们今天看到的八达岭长城，大多是明代重修的。它墙体高大坚固，用巨大的条石和城砖砌成，平均高度七米八，墙顶可以五马并骑、十人并行。登上长城远眺，群山起伏，巨龙蜿蜒，您一定能感受到“不到长城非好汉”的豪情。游览时建议您穿着舒适的鞋子，缓步攀登，注意安全，量力而行。祝您旅途愉快。",
+        tip: "有缆车和索道可选；冬季注意保暖、结冰路段慢行。"
+      },
+      {
+        id: "yiheyuan", name: "颐和园", location: "北京市海淀区新建宫门路19号", tag: "世界遗产 · 5A",
+        summary: "中国现存规模最大的皇家园林，昆明湖与万寿山相映成趣。",
+        intro: "颐和园是中国现存规模最大、保存最完整的皇家园林，以昆明湖、万寿山为基址，汲取江南园林的设计手法而建成，是乾隆皇帝为母亲祝寿所建的清漪园的扩建之作，1998年列入世界文化遗产。",
+        script: "各位游客，欢迎来到颐和园。颐和园始建于清朝乾隆十五年，也就是公元一七五零年，最初叫清漪园，是乾隆皇帝为了给母亲庆贺六十大寿而修建的。可惜在一八六零年被英法联军焚毁，后来慈禧太后挪用海军经费重新修建，并改名颐和园。全园面积约三百公顷，其中四分之三是水面。万寿山和昆明湖构成了园子的主体，长廊、佛香阁、十七孔桥都是这里的经典景观。特别是东起邀月门、西至石丈亭的长廊，全长七百二十八米，廊上的彩画有一万四千多幅，被称为“世界第一廊”。在昆明湖畔吹着湖风漫步，最能体会皇家园林的悠闲气派。祝您在颐和园玩得开心。",
+        tip: "可乘船游昆明湖；节假日人流量大，建议早到。"
+      }
+    ]
+  },
+  {
+    id: "xian", name: "西安", icon: "🗿", region: "西北",
+    spots: [
+      {
+        id: "bingmayong", name: "秦始皇帝陵博物院", location: "西安市临潼区秦陵北路", tag: "世界遗产 · 5A",
+        summary: "被誉为“世界第八大奇迹”的秦始皇兵马俑。",
+        intro: "兵马俑是秦始皇陵的陪葬坑，1974年被当地农民打井时偶然发现，被誉为“世界第八大奇迹”。目前已发掘出三个俑坑，出土陶俑陶马八千余件，每个陶俑的面容、姿态都各不相同，1987年与秦始皇陵一同列入世界文化遗产。",
+        script: "各位朋友，欢迎来到秦始皇帝陵博物院。一九七四年三月，临潼县西杨村的农民在打井的时候，意外挖出了几个破碎的陶俑，一个震惊世界的考古发现就此展开。这里就是秦始皇陵的陪葬坑，兵马俑坑。目前已发现的俑坑有四个，其中一号坑最大，东西长两百三十米，南北宽六十二米，里面排列着六千多个和真人真马一样大小的陶俑，排成整齐的军阵，气势磅礴。最令人惊叹的是，八千多个陶俑，每一个的面容、发式、表情都不一样，被称为“千人千面”。它们原本都带着鲜艳的色彩，只是出土后很快氧化褪色，所以今天我们看到的是青灰色的军团。两千两百多年前，秦始皇就是带着这样一支强大的军队，横扫六国，一统天下。站在这里，历史的震撼扑面而来。游览完俑坑，您还可以去旁边的秦始皇帝陵看看。祝您参观愉快。",
+        tip: "建议请讲解或使用讲解器；周一闭馆，需提前预约。"
+      },
+      {
+        id: "dayanta", name: "大雁塔", location: "西安市雁塔区雁塔南路", tag: "世界遗产 · 5A",
+        summary: "玄奘法师译经之地，唐代长安的标志性建筑。",
+        intro: "大雁塔位于大慈恩寺内，是唐代高僧玄奘法师为保存从印度取回的经书佛像而主持修建的，初建为五层，后改建为七层，现存塔高64.5米，是现存最早、规模最大的唐代四方楼阁式砖塔。",
+        script: "各位朋友，您面前这座雄伟的砖塔，就是大雁塔。公元六四五年，唐代高僧玄奘法师从天竺取经归来，带回了六百五十七部梵文经书。为了保存这些珍贵的经书，他在朝廷的支持下，于大慈恩寺内主持修建了这座塔，最初是五层，后来武则天时期改建为七层。大雁塔高六十四米多，由青砖砌成，层层收分，古朴庄重。在唐代，凡考中进士的人，都要登塔题名，这就是著名的“雁塔题名”，白居易当年就曾留下“慈恩塔下题名处，十七人中最少年”的诗句。今天的西安城以这座塔为文化中心，周边的广场、音乐喷泉、大唐不夜城，让古老与现代在这里交融。晚上大雁塔北广场的音乐喷泉表演非常壮观，值得一看。祝您玩得尽兴。",
+        tip: "大雁塔北广场有亚洲最大音乐喷泉，晚间开放。"
+      },
+      {
+        id: "huaqinggong", name: "华清宫", location: "西安市临潼区华清路38号", tag: "5A",
+        summary: "唐玄宗与杨贵妃的爱情故事发生地，唐代皇家温泉行宫。",
+        intro: "华清宫背靠骊山，面向渭水，是唐代著名的皇家温泉行宫，因唐玄宗与杨贵妃的爱情故事而闻名。白居易“春寒赐浴华清池，温泉水滑洗凝脂”说的就是这里。",
+        script: "各位游客，欢迎来到华清宫。这里背靠骊山，面向渭水，自古以来就是著名的温泉胜地。三千年前，周幽王在这里修建骊宫；到了唐代，唐玄宗先后多次扩建，将其变成规模宏大的皇家离宫，赐名华清宫。这里最出名的，当属唐玄宗与杨贵妃的故事。每年十月，唐玄宗都要带着杨贵妃到这里过冬、沐浴温泉。白居易在《长恨歌》里写道：“春寒赐浴华清池，温泉水滑洗凝脂。”描写的就是贵妃在此沐浴的情景。园内的海棠汤，就是当年杨贵妃专用的汤池。一九三六年，震惊中外的“西安事变”也发生在这里，蒋介石当年就住在五间厅，至今墙上还留有枪战的弹孔。华清宫的温泉水温常年保持在四十三度左右，富含多种矿物质，至今仍在供人洗浴。祝您在华清宫感受一段跨越千年的传奇。",
+        tip: "可与兵马俑安排同一日游览，两地相距不远。"
+      }
+    ]
+  },
+  {
+    id: "hangzhou", name: "杭州", icon: "🌊", region: "华东",
+    spots: [
+      {
+        id: "xihu", name: "西湖", location: "杭州市西湖区龙井路1号", tag: "世界遗产 · 5A",
+        summary: "三面云山一面城，十景闻名天下。",
+        intro: "西湖三面环山，一面临城，湖光山色，四季皆景。苏堤春晓、断桥残雪、雷峰夕照、三潭印月等“西湖十景”名扬天下，2011年列入世界文化遗产名录。",
+        script: "各位朋友，欢迎来到人间天堂杭州西湖。西湖的美，在于它的山、水、人文浑然一体。它三面环山，一面紧临杭州城，湖面约六平方公里，烟波浩渺，风光旖旎。白居易说“未能抛得杭州去，一半勾留是此湖”，苏东坡更是把西湖比作美人，写下“欲把西湖比西子，淡妆浓抹总相宜”的千古名句。西湖十景，景景有故事：苏堤春晓是苏东坡疏浚西湖后筑堤植柳而成；断桥残雪因许仙与白娘子的传说而浪漫；雷峰夕照，塔下压着的是白娘子的传说；还有平湖秋月、三潭印月、柳浪闻莺……春夏秋冬、晨昏雨雪，西湖各有各的风韵。您可以沿湖漫步，也可以乘船到湖心，看一看印在一元人民币背面的三潭印月。游览西湖最好的方式，就是放慢脚步，把心交给这片湖山。祝您在西湖度过美好的一天。",
+        tip: "环湖可骑行或乘电瓶车；雷峰塔、断桥傍晚景色最佳。"
+      },
+      {
+        id: "lingyinsi", name: "灵隐寺", location: "杭州市西湖区灵隐路法云弄1号", tag: "千年古刹",
+        summary: "济公出家的千年古刹，飞来峰造像闻名。",
+        intro: "灵隐寺始建于东晋咸和元年（326年），是杭州最早的名刹，也是济公和尚出家的地方。寺前飞来峰上有五代至宋元的石窟造像三百多尊，是我国南方石窟艺术的瑰宝。",
+        script: "各位施主、各位朋友，欢迎来到灵隐寺。灵隐寺始建于东晋咸和元年，也就是公元三百二十六年，至今已经有一千七百多年的历史了，是杭州现存最早的寺院。相传印度高僧慧理来到杭州，看到这里山峰奇秀，以为是“仙灵所隐”，就在这里建寺，取名灵隐。大家一定都听过济公的故事，南宋时，那位疯疯癫癫、劫富济贫的济公和尚，就在灵隐寺出家。灵隐寺前有飞来峰，相传是从印度灵鹫山飞来的，山上保存着五代到宋元时期的石窟造像三百多尊，最大的弥勒佛像足有九米多高，笑容可掬，是江南地区规模最大的石窟艺术群。寺内大雄宝殿供奉的释迦牟尼佛像，高二十四米多，是国内最大的木雕坐像之一。千年古刹，香烟袅袅，愿您在这里得到内心的宁静与平安。",
+        tip: "飞来峰与灵隐寺为联票；建议清晨前往，香客较少。"
+      },
+      {
+        id: "leifengta", name: "雷峰塔", location: "杭州市西湖区南山路15号", tag: "传说地标",
+        summary: "白蛇传说的发生地，登塔可俯瞰西湖全景。",
+        intro: "雷峰塔始建于五代吴越国时期，1924年倒塌，2002年重建。因《白蛇传》中白娘子被压在雷峰塔下的传说而家喻户晓，登塔可俯瞰整个西湖。",
+        script: "各位朋友，现在我们来到了雷峰塔。雷峰塔始建于五代吴越国时期，至今已有一千多年的历史。它原本是吴越国王钱俶为供奉佛螺髻发而建的佛塔，一九二四年轰然倒塌，二零零二年在原址上重建。说起雷峰塔，大家最熟悉的，一定是《白蛇传》的故事：白娘子为了救许仙，水漫金山，最后被法海镇压在雷峰塔下。鲁迅先生写过一篇《论雷峰塔的倒掉》，说塔倒掉了，白娘子就得救了，老百姓都为此高兴。如今我们登上雷峰塔，可以乘坐透明的观光电梯直达塔顶，放眼望去，西湖全景尽收眼底。特别是傍晚时分，夕阳西下，晚霞映照着湖面，这便是著名的“雷峰夕照”，是西湖十景之一。塔下还保留着老塔的遗址，可以看到古老的塔基，感受历史的沧桑。祝您登塔愉快，把西湖的美景尽收眼底。",
+        tip: "傍晚登塔看“雷峰夕照”最佳，塔内有电梯。"
+      }
+    ]
+  },
+  {
+    id: "chengdu", name: "成都", icon: "🐼", region: "西南",
+    spots: [
+      {
+        id: "dujiangyan", name: "都江堰", location: "成都市都江堰市公园路", tag: "世界遗产 · 5A",
+        summary: "两千多年前的水利工程奇迹，至今仍在灌溉成都平原。",
+        intro: "都江堰是战国时期秦国蜀郡太守李冰父子主持修建的大型水利工程，以无坝引水为特征，两千多年来一直发挥着防洪灌溉的作用，使成都平原成为“天府之国”，2000年列入世界文化遗产。",
+        script: "各位朋友，欢迎来到都江堰。这里可以说是全世界最伟大的水利工程之一。两千两百多年前的战国时期，秦国蜀郡太守李冰父子，率领民众修建了这座无坝引水的水利工程。它由鱼嘴分水堤、飞沙堰溢洪道、宝瓶口引水口三大主体工程组成，巧妙地把岷江的水一分为二，内江灌溉成都平原，外江泄洪排沙。两千多年来，都江堰一直沿用至今，灌溉着上千万亩良田，让原本水旱频繁的成都平原变成了“天府之国”。您看那宝瓶口，是李冰带领民众用火烧水浇的办法，硬生生在玉垒山上凿开的，千年之后依旧坚挺。这里没有大坝拦水，完全顺应自然、因势利导，体现了古人“道法自然”的智慧。两千年的时光过去了，江水依然奔流，造福一方。走一走安澜索桥，看一看岷江的滔滔江水，您会由衷地敬佩古人的伟大。",
+        tip: "建议游览顺序：离堆公园→伏龙观→宝瓶口→飞沙堰→安澜索桥→二王庙。"
+      },
+      {
+        id: "wuhouci", name: "武侯祠", location: "成都市武侯区武侯祠大街231号", tag: "三国圣地",
+        summary: "中国唯一君臣合祀祠庙，纪念诸葛亮与刘备。",
+        intro: "武侯祠是纪念三国蜀汉丞相诸葛亮的祠庙，是中国唯一一座君臣合祀的祠庙，与刘备的惠陵相连，是“三国圣地”，也是成都著名的旅游胜地。",
+        script: "各位朋友，欢迎来到成都武侯祠。这是中国唯一一座君臣合祀的祠庙，里面供奉着蜀汉先主刘备和丞相诸葛亮。武侯祠始建于西晋末年，一千七百多年来历经兴废，现存建筑大多是清康熙年间重建的。走进大门，迎面是高大庄严的刘备殿，殿内塑着刘备的贴金塑像；穿过刘备殿，就是武侯祠的核心——诸葛亮殿。大殿正中，诸葛丞相羽扇纶巾，安坐其上，匾额上写着“名垂宇宙”四个大字。他的一生，鞠躬尽瘁，死而后已；他的人格，出师未捷身先死，长使英雄泪满襟。祠内还有著名的《出师表》碑刻，是岳飞书写后刻石流传的，书法与文章双绝。旁边就是刘备的惠陵，墓碑上刻着“汉昭烈皇帝之陵”。武侯祠内古柏森森，红墙夹道，最能体会三国那段英雄辈出的历史。喜欢三国文化的朋友，一定会不虚此行。",
+        tip: "紧邻锦里古街，可安排一起游览。"
+      },
+      {
+        id: "panda", name: "成都大熊猫繁育研究基地", location: "成都市成华区熊猫大道1375号", tag: "必打卡",
+        summary: "看圆滚滚的大熊猫吃竹子、爬树、打滚。",
+        intro: "成都大熊猫繁育研究基地是世界著名的大熊猫保护研究机构，这里生活着上百只大熊猫，游客可以近距离观看大熊猫进食、爬树、嬉戏，是来成都必去的打卡地。",
+        script: "各位朋友，欢迎来到成都大熊猫繁育研究基地。这里生活着一百多只大熊猫，从刚出生的熊猫宝宝，到成年的大熊猫，各个年龄段的都能看到。参观大熊猫有个秘诀，就是要早！大熊猫主要在上午活动，清晨七八点钟它们最活跃，忙着吃竹子、玩耍，到了中午天气热了，它们多半就开始呼呼大睡了。您看它们抱着竹子啃的样子，一天要吃十几公斤竹子，真是个“干饭大王”。大熊猫是中国的国宝，也是全世界的宠儿。在这个基地，科学家们通过人工繁育和野化训练，让大熊猫的种群不断壮大，已经有很多大熊猫被放归自然。游览的时候，请保持安静，不要投喂食物，也不要用闪光灯拍照，让这些可爱的家伙们自在生活。看看它们爬树、打滚、发呆的样子，一天的疲惫都会一扫而空。祝您和这些国宝们玩得开心。",
+        tip: "务必早到（7:30开园），上午是大熊猫活跃期；建议乘观光车到山顶月亮产房再步行下山。"
+      }
+    ]
+  },
+  {
+    id: "shanghai", name: "上海", icon: "🌆", region: "华东",
+    spots: [
+      {
+        id: "waitan", name: "外滩", location: "上海市黄浦区中山东一路", tag: "城市地标",
+        summary: "万国建筑博览群与陆家嘴天际线隔江相望。",
+        intro: "外滩是上海最具标志性的滨江景观带，一侧是风格各异的“万国建筑博览群”，另一侧是陆家嘴的现代摩天大楼，黄浦江穿流其间，是上海城市风光的精华所在。",
+        script: "各位朋友，欢迎来到上海外滩。外滩全长约一点五公里，是上海的标志和名片。眼前这一排风格各异的建筑，是当年的外国银行、商行和总会大楼，有哥特式、巴洛克式、罗马式等各种风格，被称为“万国建筑博览群”，记录了上海开埠以来的百年沧桑。江对岸，就是浦东陆家嘴，东方明珠广播电视塔、上海中心大厦、金茂大厦、环球金融中心一字排开，构成了上海现代化的天际线。一边是凝固的历史，一边是流动的未来，这强烈的对比，正是上海最迷人的地方。每当华灯初上，两岸灯火辉煌，浦江游船穿梭往来，夜景美不胜收。您还可以登上外滩观光平台，吹着江风，看一看黄浦江奔流不息，感受这座城市的澎湃活力。建议您傍晚来，从黄昏看到入夜，把外滩最美的两个时刻一次看够。",
+        tip: "夜景最佳；可与南京路步行街、豫园安排一日游。"
+      },
+      {
+        id: "yuyuan", name: "豫园", location: "上海市黄浦区福佑路168号", tag: "江南园林",
+        summary: "明代江南古典园林，闹市中的静谧绿洲。",
+        intro: "豫园是明代四川布政使潘允端为父母养老而建的私家园林，距今四百多年，是江南古典园林的代表作，园内玉玲珑假山、九曲桥、湖心亭等景观闻名。",
+        script: "各位朋友，欢迎来到豫园。豫园始建于明朝嘉靖三十八年，也就是公元一五五九年，距今已有四百六十多年的历史。它是明代四川布政使潘允端，为了给父母安享晚年而修建的私家园林，“豫”字有平安、安泰之意，寄托着孝心与祝愿。豫园虽然面积不大，但设计精巧，一步一景，是典型的江南古典园林。园中最著名的，是三穗堂前的“玉玲珑”，这块太湖石玲珑剔透，多孔多窍，据说在下面烧香，烟能从各个孔洞中袅袅飘出，是江南三大奇石之一。园内假山层叠，亭台楼阁，回廊曲折，溪水环绕，把江南园林“小中见大”的造园艺术展现得淋漓尽致。走出豫园，就是热闹的豫园商城，九曲桥、湖心亭、南翔小笼包，老上海的味道扑面而来。在闹市之中，豫园像一片安静的绿洲，让人恍若穿越回了四百年前的江南。",
+        tip: "豫园与城隍庙相邻，可顺路品尝南翔小笼包。"
+      },
+      {
+        id: "dongfangmingzhu", name: "东方明珠广播电视塔", location: "上海市浦东新区世纪大道1号", tag: "城市地标",
+        summary: "上海标志性建筑，高空俯瞰全城风光。",
+        intro: "东方明珠广播电视塔高468米，1995年建成，是上海最具代表性的地标建筑之一。塔上有观光层、旋转餐厅和透明悬空廊道，可360度俯瞰上海全景。",
+        script: "各位朋友，您现在看到的，就是上海的标志性建筑——东方明珠广播电视塔。它总高四百六十八米，一九九五年建成，当时是亚洲第一、世界第三高塔。塔的设计灵感来自唐代诗人白居易《琵琶行》中的名句：“大珠小珠落玉盘”，十一个大小不一的球体串联在三个直筒体上，寓意深刻，造型独特。您可以乘电梯登上二百六十三米的上球体观光层，在这里，整个上海尽收眼底：脚下是高楼林立的陆家嘴金融区，蜿蜒的黄浦江如一条玉带，将浦江两岸的美景串联起来。还有一个刺激的项目，就是二百五十九米处的透明悬空廊道，脚下的玻璃是透明的，走在上面仿佛凌空漫步。塔内还有旋转餐厅，可以一边用餐，一边欣赏缓缓转动的城市全景。华灯初上时登上塔顶，满城灯火如同星河，是上海夜景的最佳打开方式。",
+        tip: "傍晚登塔可同时看日景与夜景；可网上提前购票。"
+      }
+    ]
+  }
+];
+
+/* ============================================================
+ *  应用逻辑（一般不用改）
+ * ============================================================ */
+var $ = function(id){ return document.getElementById(id); };
+var kw = $("kw"), cityGrid = $("cityGrid"), spotList = $("spotList"),
+    listTitle = $("listTitle"), detailBox = $("detailBox"), backBtn = $("backBtn"),
+    player = $("player"), btnPlay = $("btnPlay"), plTitle = $("plTitle"),
+    plStatus = $("plStatus"), btnStop = $("btnStop"), toast = $("toast"),
+    settingsBtn = $("settingsBtn");
+
+var flat = [];
+APP_DATA.forEach(function(c){
+  c.spots.forEach(function(s){
+    s.cityName = c.name; s.cityIcon = c.icon; flat.push(s);
+  });
+});
+
+/* ---------- 页面切换 ---------- */
+function go(page){
+  document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
+  $("page-"+page).classList.add("active");
+  window.scrollTo(0,0);
+  if(page === "home") backBtn.style.display = "none";
+  else backBtn.style.display = "";
+}
+backBtn.onclick = function(){
+  var cur = document.querySelector(".page.active").id;
+  if(cur === "page-list"){ go("home"); stopSpeak(); player.classList.remove("show"); }
+  else if(cur === "page-detail"){ go("list"); stopSpeak(); player.classList.remove("show"); }
+  else if(cur === "page-map"){ stopGuideSpeak(); stopGuideTimer(); stopGPS(); go("guide"); }
+  else if(cur === "page-guide"){ go("home"); }
+  else if(cur === "page-free"){ stopFreeGPS(); go("home"); }
+  else if(cur === "page-settings"){ go("home"); }
+};
+settingsBtn.onclick = function(){ openSettings(); go("settings"); };
+
+/* ---------- 首页城市 ---------- */
+function renderCities(list){
+  cityGrid.innerHTML = "";
+  if(!list.length){ cityGrid.innerHTML = '<div class="empty">没有找到匹配的城市/景点</div>'; return; }
+  list.forEach(function(c){
+    var div = document.createElement("div");
+    div.className = "city-card";
+    div.innerHTML = '<div class="ico">'+c.icon+'</div><div class="nm">'+c.name+'</div><div class="ct">'+c.region+' · '+c.spots.length+'个景点</div>';
+    div.onclick = function(){
+      currentCity = c;
+      renderSpots(c.spots);
+      listTitle.textContent = c.icon+" "+c.name+" · 景点列表";
+      go("list");
+    };
+    cityGrid.appendChild(div);
+  });
+  $("cityCount").textContent = "（共"+APP_DATA.length+"城 · "+flat.length+"景）";
+}
+var currentCity = null;
+
+/* ---------- 景点列表 ---------- */
+function renderSpots(list){
+  spotList.innerHTML = "";
+  if(!list.length){ spotList.innerHTML = '<div class="empty">暂无景点</div>'; return; }
+  list.forEach(function(s){
+    var div = document.createElement("div");
+    div.className = "spot-card";
+    div.innerHTML = '<div><div class="t">'+s.name+'</div><div class="d">'+s.summary+'</div></div><div class="arr">›</div>';
+    div.onclick = function(){ openDetail(s); };
+    spotList.appendChild(div);
+  });
+}
+
+/* ---------- 详情 ---------- */
+function openDetail(s){
+  currentSpot = s;
+  detailBox.innerHTML =
+    '<div class="detail-head">'+
+      '<div class="name">'+s.name+'</div>'+
+      '<div class="loc">📍 '+s.location+'</div>'+
+      (s.tag?'<span class="tag">'+s.tag+'</span>':'')+
+    '</div>'+
+    '<div class="panel"><h3>📌 景点简介</h3><div class="intro">'+s.intro+'</div></div>'+
+    '<div class="panel"><h3>🎧 讲解词</h3><div class="script">'+s.script+'</div></div>'+
+    (s.tip?'<div class="panel"><h3>💡 小贴士</h3><div class="intro">'+s.tip+'</div></div>':'');
+  plTitle.textContent = s.name+" · 讲解";
+  plStatus.textContent = "点击播放";
+  stopSpeak();
+  player.classList.add("show");
+  go("detail");
+}
+var currentSpot = null;
+
+/* ---------- 语音播放（Web Speech API，免费中文TTS） ---------- */
+var utterance = null, playing = false, rate = 1;
+function pickChineseVoice(){
+  var voices = speechSynthesis.getVoices();
+  if(!voices.length) return null;
+  var prefer = voices.filter(function(v){ return v.lang && v.lang.indexOf("zh") === 0; });
+  var fav = prefer.filter(function(v){ return /xiaoxiao|tingting|meijia|huihui|yaoyao|sinji|female/i.test(v.name); });
+  return (fav[0] || prefer[0] || voices[0]);
+}
+function speak(text){
+  speechSynthesis.cancel();
+  utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "zh-CN";
+  utterance.rate = rate;
+  var v = pickChineseVoice();
+  if(v) utterance.voice = v;
+  utterance.onstart = function(){ playing = true; btnPlay.textContent = "⏸"; btnPlay.classList.add("playing"); plStatus.textContent = "正在讲解…"; };
+  utterance.onend = function(){ playing = false; btnPlay.textContent = "▶"; btnPlay.classList.remove("playing"); plStatus.textContent = "讲解结束"; };
+  utterance.onerror = function(e){
+    playing = false; btnPlay.textContent = "▶"; btnPlay.classList.remove("playing");
+    if(e && (e.error === "canceled" || e.error === "interrupted")){ plStatus.textContent = "已停止"; }
+    else { plStatus.textContent = "播放中断（浏览器不支持语音或系统语音不可用）"; }
+  };
+  speechSynthesis.speak(utterance);
+}
+function stopSpeak(){
+  speechSynthesis.cancel();
+  playing = false;
+  btnPlay.textContent = "▶";
+  btnPlay.classList.remove("playing");
+  plStatus.textContent = "已停止";
+}
+btnPlay.onclick = function(){
+  if(!currentSpot) return;
+  if(playing){ speechSynthesis.pause(); playing = false; btnPlay.textContent = "▶"; btnPlay.classList.remove("playing"); plStatus.textContent = "已暂停"; return; }
+  if(speechSynthesis.paused){ speechSynthesis.resume(); playing = true; btnPlay.textContent = "⏸"; btnPlay.classList.add("playing"); plStatus.textContent = "继续讲解…"; return; }
+  speak(currentSpot.script);
+};
+btnStop.onclick = function(){ stopSpeak(); player.classList.remove("show"); };
+document.querySelectorAll(".rate-btn").forEach(function(b){
+  b.onclick = function(){
+    document.querySelectorAll(".rate-btn").forEach(function(x){ x.classList.remove("on"); });
+    b.classList.add("on");
+    rate = parseFloat(b.getAttribute("data-rate"));
+    toastMsg("语速已设为 "+rate+"x");
+    if(playing){ speak(currentSpot.script); }
+  };
+});
+/* 兼容部分浏览器 voices 异步加载 */
+if("speechSynthesis" in window){
+  speechSynthesis.onvoiceschanged = function(){ pickChineseVoice(); };
+  setTimeout(function(){ pickChineseVoice(); }, 300);
+}
+
+/* ---------- 搜索 ---------- */
+function doSearch(){
+  var q = kw.value.trim().toLowerCase();
+  if(!q){ renderCities(APP_DATA); toastMsg("请输入关键词"); return; }
+  var hitCities = APP_DATA.filter(function(c){
+    return c.name.toLowerCase().indexOf(q) > -1;
+  });
+  if(hitCities.length){ renderCities(hitCities); go("home"); toastMsg("找到城市："+hitCities.map(function(c){return c.name;}).join("、")); return; }
+  var hitSpots = flat.filter(function(s){
+    return (s.name+s.cityName+s.summary+s.intro).toLowerCase().indexOf(q) > -1;
+  });
+  if(hitSpots.length){
+    listTitle.textContent = "搜索“"+kw.value+"”结果（"+hitSpots.length+"个）";
+    renderSpots(hitSpots);
+    go("list");
+  } else {
+    toastMsg("没有找到“"+kw.value+"”，可检查关键词或去数据区添加");
+  }
+}
+$("searchBtn").onclick = doSearch;
+kw.addEventListener("keydown", function(e){ if(e.key === "Enter") doSearch(); });
+
+/* ---------- toast ---------- */
+var toastTimer = null;
+function toastMsg(t){
+  toast.textContent = t; toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 2000);
+}
+
+/* ============================================================
+ *  设置（localStorage 本地保存）
+ * ============================================================ */
+var SETTINGS_KEY = "spotguide_settings";
+var LIB_KEY = "spotguide_lib";
+var DEFAULT_SETTINGS = { deepseekKey:"", amapKey:"", proxyUrl:"", amapProxy:"" };
+function loadSettings(){
+  try{ return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")); }
+  catch(e){ return Object.assign({}, DEFAULT_SETTINGS); }
+}
+function saveSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+function openSettings(){
+  var s = loadSettings();
+  $("setDsk").value = s.deepseekKey;
+  $("setAmap").value = s.amapKey;
+  $("setProxy").value = s.proxyUrl;
+  $("setAmapProxy").value = s.amapProxy;
+}
+$("saveSettings").onclick = function(){
+  var s = { deepseekKey:$("setDsk").value.trim(), amapKey:$("setAmap").value.trim(), proxyUrl:$("setProxy").value.trim(), amapProxy:$("setAmapProxy").value.trim() };
+  saveSettings(s);
+  toastMsg("设置已保存（仅存本机浏览器）");
+};
+
+/* ============================================================
+ *  个人讲解库（AI生成的内容自动缓存，常去的地方越用越准）
+ * ============================================================ */
+function loadLib(){
+  try{ return JSON.parse(localStorage.getItem(LIB_KEY)||"[]"); }catch(e){ return []; }
+}
+function saveLib(lib){ localStorage.setItem(LIB_KEY, JSON.stringify(lib)); }
+function findInLib(name){
+  var lib = loadLib(); var n = (name||"").toLowerCase();
+  if(!n) return null;
+  for(var i=0;i<lib.length;i++){
+    var it = lib[i].name || "";
+    if(it.toLowerCase().indexOf(n) > -1 || n.indexOf(it.toLowerCase()) > -1) return lib[i];
+  }
+  return null;
+}
+function addToLib(entry){
+  var lib = loadLib();
+  var existing = findInLib(entry.name);
+  if(existing){ existing.script = entry.script; existing.address = entry.address||existing.address; existing.ts = Date.now(); existing.source = entry.source||"ai"; }
+  else { lib.unshift(entry); }
+  saveLib(lib);
+  renderLib();
+}
+function removeFromLib(id){
+  var lib = loadLib().filter(function(it){ return it.id !== id; });
+  saveLib(lib);
+  renderLib();
+}
+function renderLib(){
+  var lib = loadLib();
+  $("libCount").textContent = "（"+lib.length+"条）";
+  var box = $("freeLib");
+  box.innerHTML = "";
+  if(!lib.length){ box.innerHTML = '<div class="empty">还没有生成过的讲解。用下方“模拟演示”或真GPS到新地点，AI 会自动生成并存入这里。</div>'; return; }
+  lib.forEach(function(it){
+    var d = document.createElement("div");
+    d.className = "lib-item";
+    var time = new Date(it.ts).toLocaleString("zh-CN", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"});
+    d.innerHTML =
+      '<div class="li-b">'+
+        '<div class="li-n">'+esc(it.name)+'</div>'+
+        '<div class="li-m">'+time+' · '+(it.source==="ai"?"AI生成":"自定义")+' · '+(esc(it.address||"无地址")||"")+'</div>'+
+      '</div>'+
+      '<button class="li-btn main" title="播放">▶</button>'+
+      '<button class="li-btn" title="删除">🗑</button>';
+    d.querySelector(".li-btn.main").onclick = function(){ speakFree(it.script); toastMsg("正在讲解「"+it.name+"」"); };
+    d.querySelector(".li-btn:last-child").onclick = function(){ removeFromLib(it.id); };
+    box.appendChild(d);
+  });
+}
+
+/* ============================================================
+ *  逆地理编码（坐标 → 地名）
+ *  优先高德（需key，JSONP免跨域），否则 OpenStreetMap 兜底
+ * ============================================================ */
+function reverseGeo(lat, lng){
+  return new Promise(function(resolve){
+    var s = loadSettings();
+    if(s.amapProxy){
+      // 高德安全代理（Vercel /api/geocode 或 PHP）：Key 在服务器端
+      fetch(s.amapProxy + (s.amapProxy.indexOf("?") > -1 ? "&" : "?") + "lat=" + lat + "&lng=" + lng)
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if(d && d.data && d.data.regeocode){
+            resolve({ source:"amap-proxy", address:d.data.regeocode.formatted_address || "", pois:(d.data.regeocode.pois||[]).slice(0,10) });
+          } else resolve(null);
+        })
+        .catch(function(){ resolve(null); });
+      setTimeout(function(){ resolve(null); }, 8000);
+      return;
+    }
+    if(s.amapKey){
+      var cb = "amap_cb_" + Date.now();
+      var done = false;
+      function finish(v){ if(!done){ done = true; delete window[cb]; resolve(v); } }
+      window[cb] = function(data){
+        try{
+          if(data && data.regeocode){
+            finish({ source:"amap", address:data.regeocode.formatted_address || "", pois:(data.regeocode.pois||[]).slice(0,10) });
+          } else finish(null);
+        }catch(e){ finish(null); }
+      };
+      var script = document.createElement("script");
+      script.src = "https://restapi.amap.com/v3/geocode/regeo?location="+lng+","+lat+"&key="+encodeURIComponent(s.amapKey)+"&extensions=all&callback="+cb;
+      script.onerror = function(){ finish(null); };
+      document.head.appendChild(script);
+      setTimeout(function(){ finish(null); }, 8000);
+    } else {
+      fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+lat+"&lon="+lng+"&zoom=18&accept-language=zh", { headers:{"Accept-Language":"zh-CN"} })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ finish({ source:"nominatim", address:(d.display_name||""), pois:[] }); })
+        .catch(function(){ finish(null); });
+      setTimeout(function(){ finish(null); }, 8000);
+    }
+  });
+}
+/* 从逆地理结果里挑一个“能讲的名称” */
+function extractName(geo){
+  if(!geo) return "";
+  if(geo.source === "amap" || geo.source === "amap-proxy"){
+    var pois = geo.pois || [];
+    var p = pois.find(function(x){ return /风景名胜|旅游|文物|公园|寺庙|古|遗址|广场|园/i.test(x.type||""); }) || pois[0];
+    if(p && p.name) return p.name;
+    return geo.address || "";
+  }
+  if(geo.address){
+    var parts = geo.address.split(",").map(function(x){ return x.trim(); }).filter(Boolean);
+    return parts[parts.length-1] || geo.address;
+  }
+  return "";
+}
+
+/* ============================================================
+ *  DeepSeek AI 生成讲解
+ * ============================================================ */
+function deepseekChat(prompt){
+  var s = loadSettings();
+  var messages = [
+    { role:"system", content:"你是一位严谨可靠的中文写作助手，擅长文旅讲解。" },
+    { role:"user", content: prompt }
+  ];
+  var payload = { model:"deepseek-chat", messages:messages, temperature:0.8, max_tokens:1000 };
+  var headers = { "Content-Type":"application/json" };
+  var url;
+  if(s.proxyUrl){
+    // 安全代理模式（Vercel /api/deepseek 或 PHP proxy）：Key 由服务器端环境变量处理，前端可不再传 Key
+    url = s.proxyUrl;
+    if(s.deepseekKey) headers["Authorization"] = "Bearer "+s.deepseekKey;
+  } else {
+    // 直连模式：必须在前端填 Key
+    url = "https://api.deepseek.com/chat/completions";
+    headers["Authorization"] = "Bearer "+s.deepseekKey;
+  }
+  return fetch(url, {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify(payload)
+  }).then(function(res){
+    if(!res.ok) throw new Error("DeepSeek 返回 HTTP "+res.status);
+    return res.json();
+  }).then(function(data){
+    if(!data || !data.choices || !data.choices.length) throw new Error("DeepSeek 返回异常");
+    return data.choices[0].message.content.trim();
+  });
+}
+function aiGenerateGuide(name, address, lat, lng){
+  var prompt =
+    "你是资深中文景区讲解员，请用模拟真人导游的口吻，为【"+name+"】写一段讲解词。\n"+
+    "已知信息：地点名称："+name+"；详细地址："+(address||"未知")+"；坐标："+lat+","+lng+"。\n"+
+    "要求：\n"+
+    "1. 口语化、亲切自然，约350-450字，像当面讲解；\n"+
+    "2. 结构：开场欢迎 → 历史/地理背景 → 1-2个典故或人物 → 核心看点 → 实用小贴士；\n"+
+    "3. 不确定的事实用“据说”“相传”等表述，严禁编造史实；\n"+
+    "4. 如果该名称不是著名景点（如普通道路、小区），就介绍当地风土人情；\n"+
+    "5. 只输出讲解词正文，不要标题，不要Markdown。";
+  var s = loadSettings();
+  if(s.deepseekKey || s.proxyUrl){
+    // 直连（填了Key）或安全代理（填了代理地址）都走真实 AI 生成
+    return deepseekChat(prompt).catch(function(err){
+      var msg = (err && err.message) || "";
+      if(/fetch|network|Failed|CORS|load/i.test(msg)){
+        toastMsg("DeepSeek 直连/代理失败，请检查设置里的 Key 或代理地址是否正确");
+      } else {
+        toastMsg("AI 生成失败："+msg);
+      }
+      throw err;
+    });
+  }
+  // 未配置 Key 时的演示讲解（说明如何开启真实AI）
+  return "【演示讲解 · 尚未配置 DeepSeek Key】"+name+"（"+(address||"此地")+"）。"+
+    "这是一段演示内容：真正使用时，请点击右上角⚙️，填入你自己的 DeepSeek API Key 并保存，"+
+    "AI 就会为这个地点生成专属的真人导游式讲解，朗读并自动存入“我的讲解库”。"+
+    "下次再到访同一个地方，会自动匹配并直接开讲。祝您旅途愉快！";
+}
+
+/* ============================================================
+ *  智能自由导览：GPS 定位 + 自动补全 + 走到哪讲到哪
+ * ============================================================ */
+var freeEntry = $("freeEntry"), freeWatch = null,
+    freeLast = {lat:0,lng:0}, freeLastGeo = 0, freeAutoPlay = true;
+
+freeEntry.onclick = function(){
+  go("free"); player.classList.remove("show"); stopSpeak();
+  renderLib();
+  $("fsState").textContent = "未定位";
+  $("fsPlace").textContent = "--";
+  $("fsCoord").textContent = "--";
+  $("fsSource").textContent = "--";
+  $("freeResult").innerHTML = "";
+};
+
+function esc(t){
+  return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function haversine(lat1,lng1,lat2,lng2){
+  var R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function startFreeGPS(){
+  stopFreeGPS();
+  if(!navigator.geolocation || !window.isSecureContext){
+    toastMsg("真GPS需要HTTPS环境：把文件上传到你个人网站后，手机访问即可。本地可用下方“模拟演示”");
+    return;
+  }
+  $("fsState").textContent = "定位中…";
+  freeLastGeo = 0;
+  freeWatch = navigator.geolocation.watchPosition(function(pos){
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    $("fsCoord").textContent = lat.toFixed(5)+", "+lng.toFixed(5);
+    var now = Date.now();
+    var dist = haversine(lat,lng,freeLast.lat,freeLast.lng);
+    if(!freeLastGeo || (dist>80 && now-freeLastGeo>20000)){
+      freeLastGeo = now; freeLast = {lat:lat,lng:lng};
+      onFreePosition(lat,lng);
+    }
+    $("fsState").textContent = "📍 跟随中（移动≥80米自动识别地点）";
+  }, function(err){
+    $("fsState").textContent = "定位失败："+(err.code===1?"未授权":err.code===2?"无法获取位置":"超时");
+    toastMsg("定位失败，请检查手机定位权限");
+  }, { enableHighAccuracy:true, maximumAge:3000, timeout:10000 });
+}
+function stopFreeGPS(){ if(freeWatch){ navigator.geolocation.clearWatch(freeWatch); freeWatch=null; } }
+
+$("freeStart").onclick = function(){ startFreeGPS(); };
+$("freeStop").onclick = function(){ stopFreeGPS(); $("fsState").textContent = "已停止"; };
+
+async function onFreePosition(lat,lng){
+  $("fsState").textContent = "正在识别地点…";
+  $("fsSource").textContent = "--";
+  var geo = await reverseGeo(lat,lng);
+  var address = geo ? geo.address : "";
+  var name = extractName(geo) || address || ("坐标 "+lat.toFixed(4)+","+lng.toFixed(4));
+  $("fsPlace").textContent = name;
+  var item = { name:name, address:address, lat:lat, lng:lng, auto:true };
+  ensureFreeGuide(item, lat, lng);
+}
+
+/* 三级自动补全：内置库 → 个人库 → AI生成 */
+function matchBuiltin(name, address){
+  var text = ((name||"")+" "+(address||"")).toLowerCase();
+  var best=null, bestScore=0;
+  flat.forEach(function(s){
+    var n=s.name.toLowerCase(), c=s.cityName.toLowerCase();
+    var score=0;
+    if(text.indexOf(n)>-1) score+=3;
+    if(text.indexOf(c)>-1) score+=1;
+    if(n.indexOf(text)>-1) score+=2;
+    if(score>bestScore){ bestScore=score; best=s; }
+  });
+  return bestScore>=2 ? best : null;
+}
+
+function ensureFreeGuide(item, lat, lng){
+  var builtin = matchBuiltin(item.name, item.address);
+  if(builtin){
+    $("fsSource").textContent = "内置精品讲解";
+    renderFreeResult({ type:"builtin", spot:builtin, item:item, lat:lat, lng:lng });
+    return;
+  }
+  var lib = findInLib(item.name);
+  if(lib){
+    $("fsSource").textContent = "我的讲解库（AI生成）";
+    renderFreeResult({ type:"lib", lib:lib, item:item, lat:lat, lng:lng });
+    if(item.auto && freeAutoPlay){
+      var d = haversine(lat,lng,lib.lat||0,lib.lng||0);
+      if(d < 120){ toastMsg("已到「"+lib.name+"」，自动开讲"); speakFree(lib.script); }
+    }
+    return;
+  }
+  $("fsSource").textContent = "未收录 · 可AI生成";
+  renderFreeResult({ type:"new", item:item, lat:lat, lng:lng });
+}
+
+function renderFreeResult(r){
+  var box = $("freeResult");
+  box.innerHTML = "";
+  var card = document.createElement("div");
+  card.className = "fr-card";
+  var badge = "", desc = "", buttons = "";
+  if(r.type === "builtin"){
+    badge = '<span class="fr-badge">📚 内置精品讲解</span>';
+    desc = '<div class="fr-desc">'+esc(r.spot.intro)+'</div>';
+    buttons =
+      '<div class="map-controls">'+
+        '<button class="gc-btn main" id="frPlay">🎧 播放讲解</button>'+
+        '<button class="gc-btn" id="frDetail">📄 看详情</button>'+
+      '</div>';
+  } else if(r.type === "lib"){
+    badge = '<span class="fr-badge lib">✅ 我的讲解库 · 已缓存</span>';
+    desc = '<div class="fr-desc">'+esc(r.lib.script)+'</div>';
+    buttons =
+      '<div class="map-controls">'+
+        '<button class="gc-btn main" id="frPlay">🎧 播放讲解</button>'+
+        '<button class="gc-btn" id="frRe">🔄 重新生成</button>'+
+      '</div>';
+  } else {
+    badge = '<span class="fr-badge ai">✨ 陌生地点 · AI 自动补全</span>';
+    desc = '<div class="fr-desc">此地还没有讲解。点击下方按钮，AI 会当场生成一篇真人导游式讲解并朗读，同时自动存入“我的讲解库”，下次到访直接开讲。</div>';
+    buttons =
+      '<div class="map-controls">'+
+        '<button class="gc-btn main" id="frGen">🤖 AI 生成并讲解</button>'+
+      '</div>';
+  }
+  card.innerHTML =
+    '<div class="fr-head">📍 识别结果</div>'+
+    '<div class="fr-name">'+esc(r.item.name)+'</div>'+
+    badge+
+    (r.item.address?'<div class="fr-addr">📮 '+esc(r.item.address)+'</div>':'')+
+    desc+buttons;
+  box.appendChild(card);
+
+  var onPlay = function(){
+    if(r.type === "builtin"){ speakFree(r.spot.script); toastMsg("正在讲解「"+r.spot.name+"」"); }
+    else if(r.type === "lib"){ speakFree(r.lib.script); toastMsg("正在讲解「"+r.lib.name+"」"); }
+  };
+  var playBtn = $("frPlay");
+  if(playBtn) playBtn.onclick = onPlay;
+  var detailBtn = $("frDetail");
+  if(detailBtn) detailBtn.onclick = function(){ openDetail(r.spot); };
+  var reBtn = $("frRe");
+  if(reBtn) reBtn.onclick = function(){ doGenerate(r.item, r.lat, r.lng, true); };
+  var genBtn = $("frGen");
+  if(genBtn) genBtn.onclick = function(){ doGenerate(r.item, r.lat, r.lng, false); };
+}
+
+/* AI 生成并存入讲解库 */
+async function doGenerate(item, lat, lng, isRegen){
+  var btn = $("frGen") || $("frRe");
+  if(btn){ btn.disabled = true; btn.textContent = "⏳ AI 生成中…"; }
+  $("fsSource").textContent = "AI 生成中…";
+  try{
+    var script = await aiGenerateGuide(item.name, item.address, lat, lng);
+    var entry = {
+      id: "lib_"+Date.now(),
+      name: item.name,
+      address: item.address || "",
+      lat: lat||0, lng: lng||0,
+      script: script,
+      summary: script.slice(0,60)+"…",
+      ts: Date.now(),
+      source: "ai"
+    };
+    addToLib(entry);
+    $("fsSource").textContent = "✅ 已生成并入库存档";
+    renderFreeResult({ type:"lib", lib:entry, item:item, lat:lat, lng:lng });
+    toastMsg("讲解已生成并存入“我的讲解库”");
+    speakFree(script);
+  }catch(e){
+    if(btn){ btn.disabled = false; btn.textContent = isRegen ? "🔄 重新生成" : "🤖 AI 生成并讲解"; }
+  }
+}
+
+/* 自由导览独立朗读（不影响景区地图状态） */
+function speakFree(text){
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = "zh-CN"; u.rate = 1;
+  var v = pickChineseVoice(); if(v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+/* 模拟演示：输入地名走完整流程（无GPS也能用） */
+$("freeSimBtn").onclick = function(){
+  var name = $("freeSimKw").value.trim();
+  if(!name){ toastMsg("请输入地名"); return; }
+  stopFreeGPS();
+  $("fsState").textContent = "模拟位置（非真实GPS）";
+  $("fsCoord").textContent = "模拟";
+  $("fsPlace").textContent = name;
+  var item = { name:name, address:"模拟位置", lat:0, lng:0, auto:false };
+  ensureFreeGuide(item, 0, 0);
+};
+$("freeSimKw").addEventListener("keydown", function(e){ if(e.key === "Enter") $("freeSimBtn").click(); });
+
+/* ============================================================
+ *  智能导览（仿真人导游 · 走到哪讲到哪）
+ *  机制：手绘景区地图 + 实时位置 + 进入景点触发半径自动讲解
+ *  mode: demo 沿路线自动走 / tap 点地图去哪 / gps 真实定位(需HTTPS)
+ * ============================================================ */
+var GUIDE_AREAS = [
+  {
+    id:"gugong", name:"故宫博物院", icon:"🏯", desc:"6个讲解点 · 模拟游览约2分钟",
+    center:{lat:39.9163,lng:116.3970}, span:{lat:0.010,lng:0.014},
+    route:[[50,90],[50,82],[50,74],[50,66],[50,58],[50,48],[50,40],[50,32],[50,22]],
+    spots:[
+      {id:"wumen", name:"午门", emoji:"🏯", x:50, y:86, r:7, script:"欢迎来到故宫博物院。现在我们正站在午门广场。午门是故宫的正门，高三十七米，因居中向阳、位当子午而得名。明清两代，每逢重大典礼，皇帝都会在午门举行盛大仪式。民间所说的“推出午门斩首”其实是讹传，午门并非行刑之地。"},
+      {id:"taihe", name:"太和殿", emoji:"👑", x:50, y:62, r:7, script:"我们现在来到了太和殿广场。太和殿俗称金銮殿，是故宫里等级最高、规模最大的建筑。明清两代，皇帝登基、大婚、册立皇后等重大典礼都在这里举行。殿前的铜鹤、铜龟和日晷，象征着江山永固、皇权至上。"},
+      {id:"qianqing", name:"乾清宫", emoji:"🏛️", x:50, y:38, r:7, script:"这座宫殿叫乾清宫，是明清两代皇帝的寝宫和日常理政之所。清代雍正以后，皇帝移居养心殿。乾清宫内高悬“正大光明”匾额，是清代秘密立储制度的见证——皇帝把写有继承人的诏书藏在匾额之后。"},
+      {id:"yuhua", name:"御花园", emoji:"🌳", x:50, y:22, r:7, script:"我们现在来到了御花园。这里是皇帝和后妃游赏休憩的地方，面积不大，却浓缩了江南园林的精华：亭台楼阁、奇石古树、花木扶疏。园中的连理柏、堆秀山、千秋亭，都是明代原物。"},
+      {id:"zhenbao", name:"珍宝馆", emoji:"💎", x:28, y:30, r:8, script:"这里就是珍宝馆，位于宁寿宫区。馆内收藏着明清两代皇家的奇珍异宝：金编钟、金冠、玉石瓷器，每一件都精美绝伦，凝聚着古代工匠的智慧，其中以乾隆皇帝的金发塔最为著名。"},
+      {id:"jiaolou", name:"角楼", emoji:"🏯", x:88, y:12, r:7, script:"故宫城垣四角的角楼，是古建筑中的杰作。它九梁十八柱、七十二脊，结构精巧，造型玲珑，与护城河相映成趣，是摄影爱好者最爱的取景地。"}
+    ]
+  },
+  {
+    id:"xihu", name:"杭州西湖", icon:"🌊", desc:"5个讲解点 · 沿苏堤漫步",
+    center:{lat:30.242,lng:120.150}, span:{lat:0.014,lng:0.018},
+    route:[[28,14],[30,22],[34,32],[42,48],[50,58],[60,64],[72,68],[80,70]],
+    spots:[
+      {id:"duanqiao", name:"断桥残雪", emoji:"🌉", x:28, y:16, r:7, script:"我们现在站在断桥。断桥是白堤的起点，也是《白蛇传》中许仙与白娘子相遇的地方。冬季雪后，桥面积雪先融，远看桥面似断非断，这便是西湖十景之一的“断桥残雪”。"},
+      {id:"pinghu", name:"平湖秋月", emoji:"🌙", x:36, y:30, r:7, script:"这里是平湖秋月，背靠孤山，面对西湖，是杭州赏月的最佳去处。每当秋夜，明月当空，湖平如镜，月光、波光交相辉映，正如诗句所说“万顷湖平长似镜，四时月好最宜秋”。"},
+      {id:"sudi", name:"苏堤春晓", emoji:"🌿", x:48, y:52, r:7, script:"我们现在正走在苏堤上。苏堤是北宋大文豪苏东坡疏浚西湖时用淤泥筑成，全长近三公里，堤上六桥，桃柳夹岸。每到春天，桃花灼灼、杨柳依依，这便是西湖十景之首的“苏堤春晓”。"},
+      {id:"santan", name:"三潭印月", emoji:"🏝️", x:62, y:64, r:8, script:"湖心这三座石塔，就是三潭印月。石塔建于宋代，中秋之夜塔内点灯，烛光透过圆孔映在湖面，与明月交相辉映，形成“三十三个月亮”的奇观。一元人民币背面的图案，就是这里。"},
+      {id:"leifeng", name:"雷峰夕照", emoji:"🗼", x:80, y:70, r:7, script:"远处的这座塔，就是雷峰塔。它始建于五代，因《白蛇传》的传说家喻户晓。一九二四年老塔倒塌，二零零二年新塔在原址重建。傍晚登塔看“雷峰夕照”，是西湖十景中最具诗意的一景。"}
+    ]
+  },
+  {
+    id:"lingyinsi", name:"灵隐寺", icon:"⛩️", desc:"6个讲解点 · 千年古刹+飞来峰造像",
+    center:{lat:30.241,lng:120.100}, span:{lat:0.012,lng:0.016},
+    route:[[50,88],[50,80],[50,72],[50,64],[50,56],[50,48],[50,40],[38,60]],
+    spots:[
+      {id:"shamen", name:"山门入口", emoji:"⛩️", x:50, y:88, r:7, script:"欢迎来到灵隐寺。这里是入口，山门上方“灵隐寺”三个字，是原中国佛教协会会长赵朴初先生所题。灵隐寺始建于东晋咸和元年，也就是公元三二六年，是杭州最早的寺院，至今已有一千七百多年历史。进寺之前，可以先看看右手边的飞来峰。接下来我们沿中轴线，依次参观天王殿、大雄宝殿。"},
+      {id:"tianwang", name:"天王殿", emoji:"🛕", x:50, y:72, r:7, script:"我们现在来到天王殿。殿内正中供奉着笑口常开的弥勒佛，两边是手执琵琶、宝剑、宝伞的四大天王。弥勒佛的背后，面朝大雄宝殿的，是韦驮菩萨，手拄金刚杵。据说这里的韦驮像是宋代木雕，弥足珍贵。"},
+      {id:"daxiong", name:"大雄宝殿", emoji:"🛕", x:50, y:54, r:7, script:"这就是灵隐寺的主殿大雄宝殿，高三十三米，气宇轩昂。殿内供奉着释迦牟尼佛坐像，高二十四点八米，是我国现存最大的木雕坐像之一，佛像全身贴金，庄严慈悲。大殿后壁是“童子拜观音”等佛教故事的彩色泥塑群像，精美绝伦，值得细看。"},
+      {id:"yaoshi", name:"药师殿", emoji:"🛕", x:50, y:38, r:7, script:"我们现在来到药师殿。殿内供奉药师佛，药师佛又称大医王佛，相传能为众生消灾延寿。灵隐寺也是济公和尚出家的地方，相传济公白天在寺里挂单，夜晚却常在外帮助穷苦百姓，民间流传着许多他惩恶扬善、扶危济困的故事。"},
+      {id:"feilaifeng", name:"飞来峰造像", emoji:"🗿", x:24, y:60, r:8, script:"现在我们来到飞来峰。相传东晋高僧慧理来到这里，惊叹说这是印度灵鹫山飞来的山峰，于是取名飞来峰，并在山下建寺，叫灵隐。山崖上保存着五代至宋元时期的石窟造像三百多尊，最有名的是这尊布袋弥勒像，高约九米，笑容可掬，是江南规模最大的石窟造像群。"},
+      {id:"jigong", name:"济公殿·一线天", emoji:"🌟", x:76, y:44, r:8, script:"这里是灵隐寺西侧的济公殿一带。南宋时，济公和尚曾在灵隐寺修行，他衣衫褴褛、行为癫狂，却一心扶危济困，深受百姓爱戴。飞来峰下还有“一线天”奇观，透过岩缝能看到一线天光。游览时请轻声慢步，保持寺院的清净。"}
+    ]
+  },
+  {
+    id:"leifengta", name:"雷峰塔", icon:"🗼", desc:"5个讲解点 · 白蛇传说+西湖全景",
+    center:{lat:30.231,lng:120.149}, span:{lat:0.010,lng:0.012},
+    route:[[50,90],[50,80],[50,70],[50,60],[50,50],[50,40]],
+    spots:[
+      {id:"taqi", name:"塔基遗址", emoji:"🏛️", x:50, y:86, r:7, script:"欢迎来到雷峰塔。我们现在在塔底，这里保留着二零零一年考古发掘出的老塔塔基遗址。老雷峰塔始建于五代吴越国时期，一九二四年轰然倒塌，只留下一堆残砖。考古人员还在这里发现了埋藏千年的地宫，出土了纯银阿育王塔、鎏金龙莲底座等珍贵文物。"},
+      {id:"layi", name:"塔身一层", emoji:"🗼", x:50, y:70, r:7, script:"这是新塔的一层大厅。新雷峰塔二零零二年建成，采用“新塔罩老塔”的独特设计，把千年遗址保护在塔内。塔内壁画讲述着白蛇传的故事：断桥相会、盗仙草、水漫金山、塔下镇妖。白娘子被法海镇压在雷峰塔下的传说，让这座塔闻名天下。"},
+      {id:"guanguang", name:"登塔观景", emoji:"🌅", x:50, y:54, r:7, script:"现在我们乘电梯登上塔顶观光层。放眼望去，西湖全景尽收眼底：苏堤、白堤如两条绿带，湖心的三潭印月清晰可见，远处群山起伏。登塔远眺，才能真正体会“欲把西湖比西子，淡妆浓抹总相宜”的意境。"},
+      {id:"xizhao", name:"夕照亭", emoji:"🌇", x:26, y:60, r:7, script:"这座亭子是夕照亭。傍晚时分，夕阳西下，晚霞满天，塔影倒映在西湖水面，这就是西湖十景之一的“雷峰夕照”。老塔未倒之前，每当落日，塔身金碧辉煌，被古人称为“雷峰夕照”，是杭州最美的黄昏之一。"},
+      {id:"jingci", name:"净慈寺·南屏晚钟", emoji:"🔔", x:80, y:40, r:8, script:"雷峰塔对面这座寺院，是净慈寺。“南屏晚钟”是西湖十景之一——净慈寺的钟声悠远，回荡在南屏山间。游览完雷峰塔，可以顺道去净慈寺走走，感受千年佛寺的宁静。"}
+    ]
+  }
+];
+
+var guideEntry=$("guideEntry"), guideAreaList=$("guideAreaList"),
+    mapSvg=$("mapSvg"), mapModes=$("mapModes"), gStart=$("gStart"), gReset=$("gReset"),
+    guideBubble=$("guideBubble"), gbName=$("gbName"), gbText=$("gbText"),
+    stNear=$("stNear"), stDist=$("stDist"), stState=$("stState"), stDone=$("stDone");
+
+var currentArea=null, gMode="demo", gPos={x:50,y:90}, gRoute=[], gRouteIdx=0,
+    gTimer=null, gPlaying=false, gPaused=false, gCurSpot=null,
+    gDone={}, gGPSWatch=null, visitorG=null, gLastTick=0;
+
+guideEntry.onclick=function(){ renderGuideAreas(); go("guide"); player.classList.remove("show"); stopSpeak(); };
+
+function renderGuideAreas(){
+  guideAreaList.innerHTML="";
+  GUIDE_AREAS.forEach(function(a){
+    var d=document.createElement("div");
+    d.className="area-card";
+    d.innerHTML='<div class="ac-ico">'+a.icon+'</div><div class="ac-b"><div class="ac-n">'+a.name+'</div><div class="ac-d">'+a.desc+' · 触发半径约70米</div></div><div class="ac-go">›</div>';
+    d.onclick=function(){ openMap(a.id); };
+    guideAreaList.appendChild(d);
+  });
+}
+
+function openMap(areaId){
+  GUIDE_AREAS.forEach(function(a){ if(a.id===areaId) currentArea=a; });
+  stopSpeak(); player.classList.remove("show");
+  $("mapTitle").textContent = currentArea.icon+" "+currentArea.name;
+  renderModes();
+  gRoute = currentArea.route;
+  gRouteIdx = 0;
+  gPos = {x:gRoute[0][0], y:gRoute[0][1]};
+  gDone = {}; gCurSpot=null;
+  stopGuideTimer(); stopGPS();
+  gPlaying=false; gPaused=false;
+  gStart.textContent="▶ 开始游览"; gStart.classList.remove("playing");
+  hideBubble();
+  updateStatus();
+  drawMap();
+  go("map");
+  stState.textContent="🚶 准备出发";
+}
+
+function renderModes(){
+  mapModes.innerHTML="";
+  [["demo","🚶 演示"],["tap","👆 点图"],["gps","📍 GPS"]].forEach(function(m){
+    var b=document.createElement("button");
+    b.className="mode-btn"+(gMode===m[0]?" on":"");
+    b.setAttribute("data-mode",m[0]);
+    b.textContent=m[1];
+    b.onclick=function(){ setMode(m[0]); };
+    mapModes.appendChild(b);
+  });
+}
+function setMode(m){
+  gMode=m;
+  renderModes();
+  if(m==="gps"){
+    if(!navigator.geolocation || !window.isSecureContext){
+      toastMsg("真实GPS需要HTTPS环境（部署到你个人网站后手机可用）。本地请用“演示”或“点图”模式");
+      gMode="demo"; renderModes(); return;
+    }
+    stopGuideTimer(); gPlaying=false;
+    gStart.textContent="📍 跟随中"; gStart.classList.add("playing");
+    startGPS();
+  } else {
+    stopGPS();
+    if(m!=="demo"){ stopGuideTimer(); gPlaying=false; gStart.textContent="▶ 开始游览"; gStart.classList.remove("playing"); }
+  }
+  toastMsg(m==="demo"?"演示模式：自动沿路线走，到点自动开讲":m==="tap"?"点图模式：点击地图任意位置即可":"GPS模式：等待真实定位…");
+}
+
+/* ---------- SVG 地图绘制 ---------- */
+function elSVG(name,attrs){
+  var e=document.createElementNS("http://www.w3.org/2000/svg",name);
+  for(var k in attrs){ e.setAttribute(k,attrs[k]); }
+  return e;
+}
+function drawMap(){
+  var svg=mapSvg; svg.innerHTML="";
+  function add(name,attrs){ var e=elSVG(name,attrs); svg.appendChild(e); return e; }
+  var a=currentArea;
+  if(a.id==="gugong"){
+    add("rect",{x:2,y:2,width:96,height:96,rx:8,fill:"#b9d6ee",stroke:"#8fb4d4","stroke-width":0.6});   // 护城河
+    add("rect",{x:7,y:7,width:86,height:86,rx:5,fill:"#eecfae",stroke:"#c08a55","stroke-width":0.8});   // 城墙
+    add("rect",{x:11,y:11,width:78,height:78,rx:3,fill:"#faf1e0"});                                    // 内城
+    add("line",{x1:50,y1:90,x2:50,y2:14,stroke:"#e3d2b0","stroke-width":0.9,"stroke-dasharray":"2 1.2"}); // 中轴线
+    add("rect",{x:28,y:15,width:44,height:13,rx:2,fill:"#d8e8c4"});                                     // 御花园
+    add("rect",{x:38,y:34,width:24,height:8,fill:"#e8d3a8"});                                           // 乾清宫基座
+    add("rect",{x:30,y:54,width:40,height:14,fill:"#efe2c4"});                                          // 太和殿广场
+    add("rect",{x:38,y:58,width:24,height:10,fill:"#e0c690"});                                          // 太和殿基座
+    add("path",{d:"M12,78 Q30,73 50,78 T88,78",fill:"none",stroke:"#9cc4e0","stroke-width":1.4});      // 金水河
+    [[15,20],[85,20],[15,50],[85,50],[20,70],[80,70],[15,35],[85,35]].forEach(function(p){
+      add("circle",{cx:p[0],cy:p[1],r:2.6,fill:"#bcd9a8"});
+    });
+    add("rect",{x:18,y:22,width:22,height:42,fill:"rgba(224,196,144,.35)"});
+    add("rect",{x:60,y:22,width:22,height:42,fill:"rgba(224,196,144,.35)"});
+  } else if(a.id==="lingyinsi"){
+    // 灵隐寺手绘：山林 + 中轴线寺庙群 + 飞来峰
+    add("rect",{x:2,y:2,width:96,height:96,rx:8,fill:"#dce9d0",stroke:"#b4cda2","stroke-width":0.6});
+    add("ellipse",{cx:24,cy:58,rx:13,ry:17,fill:"#c3d9ab",stroke:"#9db87f","stroke-width":0.6});       // 飞来峰
+    add("path",{d:"M6,96 Q28,74 34,58 T30,30 Q26,16 34,6",fill:"none",stroke:"#a8c48a","stroke-width":1.4,opacity:.8});
+    add("rect",{x:34,y:14,width:32,height:72,rx:4,fill:"#f2e2c2",stroke:"#c9a76a","stroke-width":0.7}); // 中轴线建筑带
+    add("rect",{x:36,y:72,width:28,height:8,fill:"#e0c690"});                                          // 天王殿
+    add("rect",{x:36,y:54,width:28,height:8,fill:"#e0c690"});                                          // 大雄宝殿
+    add("rect",{x:36,y:38,width:28,height:7,fill:"#e0c690"});                                          // 药师殿
+    add("rect",{x:66,y:24,width:16,height:10,fill:"#e8d3a8",stroke:"#c9a76a","stroke-width":0.5});     // 济公殿
+    [[14,30],[40,20],[70,14],[86,34],[12,80],[88,72],[52,18]].forEach(function(p){
+      add("circle",{cx:p[0],cy:p[1],r:2.8,fill:"#8fbf6f"});
+    });
+  } else if(a.id==="leifengta"){
+    // 雷峰塔手绘：西湖 + 夕照山 + 塔 + 净慈寺
+    add("rect",{x:2,y:2,width:96,height:96,rx:8,fill:"#cfe6f5",stroke:"#a6cbe4","stroke-width":0.6});   // 湖面
+    add("ellipse",{cx:50,cy:76,rx:27,ry:18,fill:"#c9ddb2",stroke:"#a3bd8c","stroke-width":0.6});       // 夕照山
+    add("rect",{x:42,y:60,width:16,height:22,rx:2,fill:"#d8c090",stroke:"#a67c3d","stroke-width":0.7}); // 塔身
+    add("rect",{x:44,y:56,width:12,height:5,fill:"#c9a227"});                                           // 塔顶
+    add("line",{x1:50,y1:56,x2:50,y2:48,stroke:"#a67c3d","stroke-width":1.2});                         // 塔尖
+    add("circle",{cx:50,cy:47,r:1.6,fill:"#c9a227"});
+    add("path",{d:"M74,86 Q82,78 88,70",fill:"none",stroke:"#d8b98c","stroke-width":1.2,opacity:.9});
+    add("rect",{x:72,y:68,width:14,height:8,rx:1.5,fill:"#f0e0c0",stroke:"#c9a76a","stroke-width":0.5}); // 净慈寺
+    [[20,22],[66,20],[88,40],[14,44],[70,88],[30,90],[60,46]].forEach(function(p){
+      add("circle",{cx:p[0],cy:p[1],r:2.2,fill:"#9cc47e"});
+    });
+  } else {
+    add("rect",{x:2,y:2,width:96,height:96,rx:8,fill:"#cfe6f5",stroke:"#a6cbe4","stroke-width":0.6});   // 湖面
+    add("line",{x1:26,y1:8,x2:82,y2:74,stroke:"#d8b98c","stroke-width":2.2,opacity:.9});               // 苏堤
+    add("line",{x1:10,y1:6,x2:34,y2:20,stroke:"#d8b98c","stroke-width":1.6,opacity:.9});               // 白堤
+    add("circle",{cx:62,cy:62,r:5,fill:"#bcd9a8"});                                                     // 湖心岛
+    add("circle",{cx:80,cy:70,r:6,fill:"#a8cd8f"});                                                     // 雷峰塔山
+    add("circle",{cx:30,cy:22,r:5,fill:"#a8cd8f"});                                                     // 孤山
+    [[14,12],[22,10],[72,16],[85,60],[18,80],[8,40],[92,30]].forEach(function(p){
+      add("circle",{cx:p[0],cy:p[1],r:2.4,fill:"#9cc47e"});
+    });
+  }
+  // 演示路线
+  if(gMode==="demo" && gRoute.length>1){
+    var pts=gRoute.map(function(p){return p[0]+","+p[1];}).join(" ");
+    add("polyline",{points:pts,fill:"none",stroke:"#e59a9a","stroke-width":0.7,"stroke-dasharray":"1.5 1.2",opacity:.8});
+  }
+  // 景点标记
+  currentArea.spots.forEach(function(s){
+    var g=elSVG("g",{});
+    g.appendChild(elSVG("circle",{cx:s.x,cy:s.y,r:4.2,fill:"#c9a227",stroke:"#fff","stroke-width":0.6}));
+    var em=elSVG("text",{x:s.x,y:s.y-4.5,"font-size":8,"text-anchor":"middle"});
+    em.textContent=s.emoji; g.appendChild(em);
+    var tx=elSVG("text",{x:s.x,y:s.y+9,"font-size":3.4,"text-anchor":"middle",fill:"#5b4632","font-weight":"bold","paint-order":"stroke","stroke":"#fff","stroke-width":0.6});
+    tx.textContent=s.name; g.appendChild(tx);
+    g.appendChild(elSVG("circle",{cx:s.x,cy:s.y,r:s.r,fill:"none",stroke:"#c9a227","stroke-width":0.3,"stroke-dasharray":"1 1",opacity:.5}));
+    if(gDone[s.id]){ var ok=elSVG("text",{x:s.x+4.5,y:s.y-4,"font-size":4.5,"text-anchor":"middle",fill:"#2e8b57"}); ok.textContent="✓"; g.appendChild(ok); }
+    g.style.cursor="pointer";
+    g.onclick=function(){ if(gMode!=="demo"){ gPos={x:s.x,y:s.y}; stopGuideSpeak(); refreshVisitor(); updateStatus(); checkTrigger(); } };
+    svg.appendChild(g);
+  });
+  drawVisitor();
+}
+
+function drawVisitor(){
+  if(visitorG) visitorG.remove();
+  var g=elSVG("g",{id:"visitor"});
+  var sh=elSVG("ellipse",{cx:gPos.x,cy:gPos.y+1.8,rx:2.4,ry:0.9,fill:"rgba(0,0,0,.18)"});
+  g.appendChild(sh);
+  var body=elSVG("circle",{cx:gPos.x,cy:gPos.y,r:2.2,fill:"#e05d4f",stroke:"#fff","stroke-width":0.5});
+  g.appendChild(body);
+  var head=elSVG("circle",{cx:gPos.x,cy:gPos.y-2.2,r:1.1,fill:"#ffe0bd",stroke:"#fff","stroke-width":0.4});
+  g.appendChild(head);
+  if(gCurSpot){ var mic=elSVG("text",{x:gPos.x,y:gPos.y-4.5,"font-size":5,"text-anchor":"middle"}); mic.textContent="🔊"; g.appendChild(mic); }
+  mapSvg.appendChild(g);
+  visitorG=g;
+}
+function refreshVisitor(){ if(visitorG) drawVisitor(); }
+
+/* ---------- 触发与讲解 ---------- */
+function nearestSpot(){
+  var best=null,bd=1e9;
+  currentArea.spots.forEach(function(s){
+    var d=Math.hypot(s.x-gPos.x,s.y-gPos.y);
+    if(d<bd){bd=d;best=s;}
+  });
+  return {spot:best, dist:bd*10};
+}
+function updateStatus(){
+  if(!currentArea) return;
+  var n=nearestSpot();
+  stNear.textContent="📍 最近景点："+n.spot.name;
+  stDist.textContent="距 "+Math.round(n.dist)+" 米";
+  var done=0; for(var k in gDone) done++;
+  stDone.textContent="已听 "+done+"/"+currentArea.spots.length;
+}
+function checkTrigger(){
+  if(!currentArea || gCurSpot) return;
+  currentArea.spots.forEach(function(s){
+    var d=Math.hypot(s.x-gPos.x,s.y-gPos.y);
+    if(d<=s.r){ triggerSpot(s); }
+  });
+}
+function triggerSpot(s){
+  gCurSpot=s;
+  gDone[s.id]=true;
+  gbName.textContent=s.name;
+  gbText.textContent=s.script;
+  guideBubble.style.display="block";
+  updateStatus();
+  stState.textContent="🎧 正在讲解「"+s.name+"」";
+  speakGuide(s.script);
+  if(gMode==="demo"){ gPaused=true; gStart.textContent="⏸ 聆听中…"; }
+}
+function endSpot(){
+  gCurSpot=null;
+  hideBubble();
+  if(gMode==="demo"){ gPaused=false; gStart.textContent="⏸ 暂停"; }
+  stState.textContent="🚶 继续前行…";
+  updateStatus();
+}
+function hideBubble(){ guideBubble.style.display="none"; }
+
+/* ---------- 导游语音（复用浏览器TTS） ---------- */
+var guideUtter=null;
+function speakGuide(text){
+  speechSynthesis.cancel();
+  guideUtter=new SpeechSynthesisUtterance(text);
+  guideUtter.lang="zh-CN";
+  guideUtter.rate=1;
+  var v=pickChineseVoice(); if(v) guideUtter.voice=v;
+  guideUtter.onend=function(){ setTimeout(endSpot,500); };
+  guideUtter.onerror=function(){ setTimeout(endSpot,300); };
+  speechSynthesis.speak(guideUtter);
+}
+function stopGuideSpeak(){ speechSynthesis.cancel(); if(gCurSpot) endSpot(); }
+
+/* ---------- 演示模式定时器 ---------- */
+function startGuideTimer(){ stopGuideTimer(); gLastTick=0; gTimer=setInterval(gTick,40); }
+function stopGuideTimer(){ if(gTimer){ clearInterval(gTimer); gTimer=null; } }
+function gTick(){
+  if(!gPlaying || gPaused || gMode!=="demo") return;
+  var now=Date.now();
+  var dt=gLastTick?(now-gLastTick)/1000:0.04;
+  gLastTick=now;
+  if(dt>0.5) dt=0.5; // 防止后台节流后瞬移
+  var target=gRoute[gRouteIdx];
+  var dx=target[0]-gPos.x, dy=target[1]-gPos.y;
+  var d=Math.hypot(dx,dy);
+  if(d<0.25){
+    gRouteIdx++;
+    if(gRouteIdx>=gRoute.length){
+      gPlaying=false; gPaused=false;
+      gStart.textContent="▶ 已到终点"; gStart.classList.remove("playing");
+      stState.textContent="🏁 游览完成，可点图或重置再逛";
+      stopGuideTimer(); refreshVisitor(); updateStatus(); return;
+    }
+    target=gRoute[gRouteIdx]; dx=target[0]-gPos.x; dy=target[1]-gPos.y; d=Math.hypot(dx,dy);
+  }
+  var step=Math.min(5.5*dt,d);
+  gPos.x+=dx/d*step; gPos.y+=dy/d*step;
+  refreshVisitor(); updateStatus(); checkTrigger();
+}
+
+gStart.onclick=function(){
+  if(gMode==="gps"){ toastMsg("GPS模式自动跟随，无需手动开始"); return; }
+  if(gMode==="tap"){ toastMsg("点图模式：点击地图任意位置即可到达"); return; }
+  if(!gPlaying){
+    if(gRouteIdx>=gRoute.length-1){ gRouteIdx=0; gPos={x:gRoute[0][0],y:gRoute[0][1]}; }
+    gPlaying=true; gPaused=false;
+    gStart.textContent="⏸ 暂停"; gStart.classList.add("playing");
+    stState.textContent="🚶 正在游览…";
+    startGuideTimer();
+  } else {
+    gPlaying=false;
+    gStart.textContent="▶ 继续"; gStart.classList.remove("playing");
+    stState.textContent="⏸ 已暂停";
+    stopGuideTimer();
+  }
+};
+gReset.onclick=function(){
+  stopGuideSpeak(); stopGuideTimer(); stopGPS();
+  gRouteIdx=0; gPos={x:gRoute[0][0],y:gRoute[0][1]};
+  gDone={}; gCurSpot=null; gPlaying=false; gPaused=false;
+  gStart.textContent="▶ 开始游览"; gStart.classList.remove("playing");
+  hideBubble();
+  drawMap(); updateStatus();
+  stState.textContent="🚶 准备出发";
+};
+
+/* ---------- 点图模式 ---------- */
+mapSvg.addEventListener("click", function(e){
+  if(gMode!=="tap") return;
+  var rect=mapSvg.getBoundingClientRect();
+  var x=(e.clientX-rect.left)/rect.width*100;
+  var y=(e.clientY-rect.top)/rect.height*100;
+  gPos={x:Math.max(2,Math.min(98,x)), y:Math.max(2,Math.min(98,y))};
+  stopGuideSpeak();
+  refreshVisitor(); updateStatus();
+  stState.textContent="👆 到达新位置";
+  checkTrigger();
+});
+
+/* ---------- 真实GPS（需HTTPS） ---------- */
+function startGPS(){
+  stopGPS();
+  toastMsg("正在获取GPS定位…");
+  gGPSWatch=navigator.geolocation.watchPosition(function(pos){
+    var x=((pos.coords.longitude-(currentArea.center.lng-currentArea.span.lng/2))/currentArea.span.lng)*100;
+    var y=((currentArea.center.lat+currentArea.span.lat/2)-pos.coords.latitude)/currentArea.span.lat*100;
+    gPos={x:Math.max(2,Math.min(98,x)), y:Math.max(2,Math.min(98,y))};
+    refreshVisitor(); updateStatus();
+    stState.textContent="📍 已定位，正在跟随…";
+    checkTrigger();
+  }, function(err){
+    toastMsg("定位失败："+(err.code===1?"未授权":err.code===2?"无法获取位置":"定位超时"));
+    gMode="demo"; renderModes();
+    gStart.textContent="▶ 开始游览"; gStart.classList.remove("playing");
+  }, {enableHighAccuracy:true, maximumAge:2000});
+}
+function stopGPS(){ if(gGPSWatch){ navigator.geolocation.clearWatch(gGPSWatch); gGPSWatch=null; } }
+
+/* ---------- PWA 安装到桌面 ---------- */
+var deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault();
+  deferredPrompt = e;
+  $("installRow").style.display = "block";
+});
+$("installBtn").onclick = function(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){
+      deferredPrompt = null;
+      $("installRow").style.display = "none";
+    });
+  } else {
+    toastMsg("请用浏览器菜单“添加到主屏幕”（iOS Safari：分享→添加到主屏幕）");
+  }
+};
+
+/* ---------- 启动 ---------- */
+renderCities(APP_DATA);
+renderLib();
+
+/* ---------- 可选：Service Worker（离线缓存 / PWA） ---------- */
+(function(){
+  try{
+    if(!("serviceWorker" in navigator)) return;
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){ /* 本地文件打开时忽略 */ });
+    });
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
