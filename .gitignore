@@ -1,6 +1,13 @@
-auth_*.txt
-*.log
-node_modules/
-tmp/
-tmp_params.json
+# 敏感配置：禁止提交到 Git（含 API Key）
 cloudbaserc.json
+.env
+.env.local
+
+# 依赖与构建
+node_modules/
+dist/
+tmp/
+
+# 系统文件
+.DS_Store
+Thumbs.db
