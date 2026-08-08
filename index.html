@@ -630,8 +630,9 @@ function openDetail(s){
 }
 var currentSpot = null;
 
-/* ---------- 语音播放（Web Speech API，免费中文TTS） ---------- */
-var utterance = null, playing = false, rate = 1;
+/* ---------- 语音播放（切片式：暂停/继续可靠，兼容 iOS Safari/微信） ---------- */
+var rate = 1;
+var playerSents = [], playerIdx = 0, playerStatus = "stopped"; // stopped / playing / paused
 function pickChineseVoice(){
   var voices = speechSynthesis.getVoices();
   if(!voices.length) return null;
@@ -639,34 +640,76 @@ function pickChineseVoice(){
   var fav = prefer.filter(function(v){ return /xiaoxiao|tingting|meijia|huihui|yaoyao|sinji|female/i.test(v.name); });
   return (fav[0] || prefer[0] || voices[0]);
 }
-function speak(text){
+/* 把讲解词按标点切成句子（不用 lookbehind，兼容性好） */
+function splitScript(text){
+  var s = String(text || "");
+  var parts = s.replace(/([。！？!?；;])/g, "$1\u0001").split("\u0001").map(function(x){ return x.trim(); }).filter(Boolean);
+  if(!parts.length) parts = [s];
+  return parts;
+}
+/* 从第 fromIndex 句开始逐句朗读；只有 status=playing 才继续下一句 */
+function speakSentences(arr, fromIndex){
+  if(!arr || !arr.length) return;
+  var i = (typeof fromIndex === "number") ? fromIndex : 0;
+  playerStatus = "playing";
+  playerSents = arr;
+  playerIdx = i;
+  btnPlay.textContent = "⏸";
+  btnPlay.classList.add("playing");
+  plStatus.textContent = "正在讲解…";
+  function next(){
+    if(playerStatus !== "playing") return;
+    if(i >= arr.length){
+      playerStatus = "stopped";
+      playerSents = [];
+      playerIdx = 0;
+      btnPlay.textContent = "▶";
+      btnPlay.classList.remove("playing");
+      plStatus.textContent = "讲解结束";
+      return;
+    }
+    playerIdx = i;
+    var u = new SpeechSynthesisUtterance(arr[i]);
+    u.lang = "zh-CN";
+    u.rate = rate;
+    var v = pickChineseVoice();
+    if(v) u.voice = v;
+    u.onend = function(){ if(playerStatus === "playing"){ i++; next(); } };
+    u.onerror = function(e){
+      if(e && e.error === "canceled") return;
+      if(playerStatus === "playing"){ i++; next(); }
+    };
+    speechSynthesis.speak(u);
+  }
   speechSynthesis.cancel();
-  utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "zh-CN";
-  utterance.rate = rate;
-  var v = pickChineseVoice();
-  if(v) utterance.voice = v;
-  utterance.onstart = function(){ playing = true; btnPlay.textContent = "⏸"; btnPlay.classList.add("playing"); plStatus.textContent = "正在讲解…"; };
-  utterance.onend = function(){ playing = false; btnPlay.textContent = "▶"; btnPlay.classList.remove("playing"); plStatus.textContent = "讲解结束"; };
-  utterance.onerror = function(e){
-    playing = false; btnPlay.textContent = "▶"; btnPlay.classList.remove("playing");
-    if(e && (e.error === "canceled" || e.error === "interrupted")){ plStatus.textContent = "已停止"; }
-    else { plStatus.textContent = "播放中断（浏览器不支持语音或系统语音不可用）"; }
-  };
-  speechSynthesis.speak(utterance);
+  next();
 }
 function stopSpeak(){
   speechSynthesis.cancel();
-  playing = false;
+  playerStatus = "stopped";
+  playerSents = [];
+  playerIdx = 0;
   btnPlay.textContent = "▶";
   btnPlay.classList.remove("playing");
   plStatus.textContent = "已停止";
 }
 btnPlay.onclick = function(){
   if(!currentSpot) return;
-  if(playing){ speechSynthesis.pause(); playing = false; btnPlay.textContent = "▶"; btnPlay.classList.remove("playing"); plStatus.textContent = "已暂停"; return; }
-  if(speechSynthesis.paused){ speechSynthesis.resume(); playing = true; btnPlay.textContent = "⏸"; btnPlay.classList.add("playing"); plStatus.textContent = "继续讲解…"; return; }
-  speak(currentSpot.script);
+  if(playerStatus === "playing"){
+    speechSynthesis.cancel();
+    playerStatus = "paused";
+    btnPlay.textContent = "▶";
+    btnPlay.classList.remove("playing");
+    plStatus.textContent = "已暂停";
+    return;
+  }
+  if(playerStatus === "paused"){
+    var arr = playerSents.length ? playerSents : splitScript(currentSpot.script);
+    speakSentences(arr, playerIdx + 1);
+    return;
+  }
+  playerSents = splitScript(currentSpot.script);
+  speakSentences(playerSents, 0);
 };
 btnStop.onclick = function(){ stopSpeak(); player.classList.remove("show"); };
 document.querySelectorAll(".rate-btn").forEach(function(b){
@@ -675,7 +718,11 @@ document.querySelectorAll(".rate-btn").forEach(function(b){
     b.classList.add("on");
     rate = parseFloat(b.getAttribute("data-rate"));
     toastMsg("语速已设为 "+rate+"x");
-    if(playing){ speak(currentSpot.script); }
+    var arr = playerSents.length ? playerSents : splitScript(currentSpot.script);
+    if(playerStatus === "playing" || playerStatus === "paused"){
+      speechSynthesis.cancel();
+      speakSentences(arr, playerIdx);
+    }
   };
 });
 /* 兼容部分浏览器 voices 异步加载 */
@@ -1737,13 +1784,19 @@ mergeAutoAreas();
 renderCities(APP_DATA);
 renderLib();
 
-/* ---------- 可选：Service Worker（离线缓存 / PWA） ---------- */
+/* ---------- Service Worker 清理：不再注册，避免旧缓存导致页面永远不更新 ---------- */
 (function(){
   try{
-    if(!("serviceWorker" in navigator)) return;
-    window.addEventListener("load", function(){
-      navigator.serviceWorker.register("sw.js").catch(function(){ /* 本地文件打开时忽略 */ });
-    });
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        regs.forEach(function(reg){ reg.unregister(); });
+      }).catch(function(){});
+    }
+    if("caches" in window){
+      caches.keys().then(function(keys){
+        keys.forEach(function(k){ caches.delete(k); });
+      }).catch(function(){});
+    }
   }catch(e){}
 })();
 </script>
