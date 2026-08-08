@@ -3,3 +3,4 @@ auth_*.txt
 node_modules/
 tmp/
 tmp_params.json
+cloudbaserc.json
