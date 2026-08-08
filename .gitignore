@@ -1,3 +1,5 @@
-﻿auth_*.txt
+auth_*.txt
 *.log
 node_modules/
+tmp/
+tmp_params.json
