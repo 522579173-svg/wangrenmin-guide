@@ -6,7 +6,8 @@
 
 | 功能 | 说明 |
 |---|---|
-| 🎙️ 仿真人导游 | 手绘景区地图 + 定位，进入景点自动开讲（内置故宫/西湖） |
+| 🎙️ 仿真人导游 | 手绘景区地图 + 定位，进入景点自动开讲（内置故宫/西湖/灵隐寺/雷峰塔） |
+| ✨ 自动生成景区地图 | **陌生景区也能用**：输入名称 → 高德自动搜景点 + DeepSeek 批量生成讲解 → 自动画地图放讲解点 → 存库，以后直接用 |
 | 🧠 智能自由导览 | GPS 定位 → 自动识别地点 → 三级自动补全：内置库 → 我的讲解库 → **DeepSeek AI 当场生成** → 朗读并缓存 |
 | 📚 我的讲解库 | AI 生成的讲解自动存档（localStorage），**常去的地方第二次去直接命中、自动开讲** |
 | 🔍 景点浏览/搜索 | 5 城 15 景内置数据，可自行扩充 |
@@ -29,7 +30,39 @@
     └── deepseek.php   # DeepSeek 代理（可选，给非 Vercel 的 PHP 主机用）
 ```
 
-## 三、部署到 Vercel（手机真机使用 · 推荐）
+## 三、当前部署：腾讯云 CloudBase（国内直连 · 无需魔法）
+
+> **当前线上版本就部署在这里**（2026-08 迁移完成，Vercel 在国内访问不稳定已弃用）：
+> - 网站：`https://guide-d4grybdwde2f9d281-1432633719.tcloudbaseapp.com`
+> - DeepSeek 代理：`https://guide-d4grybdwde2f9d281-1432633719.ap-shanghai.app.tcloudbase.com/deepseek`
+> - 高德代理：`https://guide-d4grybdwde2f9d281-1432633719.ap-shanghai.app.tcloudbase.com/geocode`
+
+### CloudBase 部署/更新方法（T CB CLI）
+
+```bash
+# 登录一次
+tcb login
+
+# 更新云函数（deepseek 超时60s / geocode 支持POI搜索，配置见 cloudbaserc.json）
+tcb fn deploy deepseek -e guide-d4grybdwde2f9d281
+tcb fn deploy geocode -e guide-d4grybdwde2f9d281
+
+# 更新静态文件（index.html 等，改动后执行）
+tcb hosting deploy index.html -e guide-d4grybdwde2f9d281 --concurrency 1
+
+# 上传其他静态文件
+tcb hosting deploy manifest.webmanifest -e guide-d4grybdwde2f9d281
+tcb hosting deploy sw.js -e guide-d4grybdwde2f9d281
+tcb hosting deploy icons -e guide-d4grybdwde2f9d281
+```
+
+云函数环境变量（已配置在 cloudbaserc.json / 控制台）：
+- `DEEPSEEK_KEY`：DeepSeek Key（服务器端，安全）
+- `AMAP_KEY`：高德「Web服务」Key（服务器端，安全）
+
+> ⚠️ 免费体验版不支持绑定自定义域名，手机装成 App 后桌面是图标，看不到网址，不影响使用。
+
+## 四、部署到 Vercel（备选 · 国内需魔法）
 
 > 你的 `wangrenmin.com` 已经托管在 Vercel，推荐**新建一个独立 Vercel 项目**部署本 App，不动你现有主站，部署后可用 `https://guide.wangrenmin.com` 这样的子域名访问。
 

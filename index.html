@@ -208,6 +208,12 @@
   .hint a{color:#1d6fb8;}
 
   .install-row{margin-top:14px;}
+
+  /* 自动生成景区地图 */
+  .auto-step{background:var(--card);border-radius:12px;padding:11px 14px;margin-bottom:8px;border:1px solid var(--line);font-size:13px;line-height:1.7;}
+  .auto-step.done{color:#2e7d32;}
+  .auto-step.fail{color:#c62828;}
+  .auto-step small{color:var(--sub);}
 </style>
 </head>
 <body>
@@ -264,6 +270,25 @@
   <div class="page" id="page-guide">
     <div class="section-title">🎙️ 仿真人导游 <small>选择景区 · 走到哪讲到哪</small></div>
     <div id="guideAreaList"></div>
+  </div>
+
+  <!-- 智能导览：自动生成景区地图 -->
+  <div class="page" id="page-automap">
+    <div class="section-title">✨ 自动生成景区地图 <small>陌生景区也能「走到哪讲到哪」</small></div>
+    <div class="panel">
+      <div class="set-field">
+        <label>输入景区名称（如：杭州西湖 / 北京故宫 / 苏州拙政园）</label>
+        <input id="autoName" type="text" placeholder="例如：杭州西湖">
+      </div>
+      <div class="map-controls">
+        <button class="gc-btn main" id="autoBuild">⚡ 自动生成地图 + 讲解</button>
+      </div>
+      <div class="hint" id="autoHint">
+        原理：① 高德搜索景区内关键景点（真实坐标）→ ② DeepSeek 为每个景点生成讲解词 → ③ 自动画手绘地图并放置讲解点 → ④ 存入「仿真人导游」列表，以后直接使用。讲解词已缓存，之后无需联网 AI 也能再播。
+      </div>
+    </div>
+    <div id="autoProgress" style="display:none;"></div>
+    <div id="autoResult"></div>
   </div>
 
   <!-- 智能导览：景区地图 -->
@@ -323,8 +348,8 @@
         <input id="setDsk" type="password" placeholder="sk-...（用安全代理可留空）">
       </div>
       <div class="set-field">
-        <label>DeepSeek 代理地址（Vercel 安全代理，Key 藏在服务器，推荐）</label>
-        <input id="setProxy" type="text" placeholder="https://你的域名/api/deepseek 或 /api/deepseek">
+        <label>DeepSeek 代理地址（腾讯云 CloudBase 安全代理，Key 藏在服务器，推荐）</label>
+        <input id="setProxy" type="text" placeholder="https://guide-xxx.ap-shanghai.app.tcloudbase.com/deepseek">
       </div>
       <div class="set-field">
         <label>高德逆地理编码 Key（可选 · 定位识别更准，lbs.amap.com 免费注册）</label>
@@ -332,17 +357,17 @@
       </div>
       <div class="set-field">
         <label>高德代理地址（可选 · Key 也藏到服务器，推荐）</label>
-        <input id="setAmapProxy" type="text" placeholder="https://你的域名/api/geocode 或 /api/geocode">
+        <input id="setAmapProxy" type="text" placeholder="https://guide-xxx.ap-shanghai.app.tcloudbase.com/geocode">
       </div>
       <div class="map-controls">
         <button class="gc-btn main" id="saveSettings">💾 保存设置</button>
       </div>
       <div class="hint">
         ① Key 有两种保存方式：<br>
-        <b>安全模式（推荐）</b>：部署到 Vercel 后，把 Key 填进 Vercel 环境变量（DEEPSEEK_KEY / AMAP_KEY），前端代理地址填 <b>/api/deepseek</b>、<b>/api/geocode</b>，浏览器里完全不出现 Key。<br>
+        <b>安全模式（推荐）</b>：部署到腾讯云 CloudBase 后，把 Key 填进云函数环境变量（DEEPSEEK_KEY / AMAP_KEY），前端代理地址已自动填入，浏览器里完全不出现 Key。<br>
         <b>直连模式</b>：把 Key 填在本页（仅存本机浏览器 localStorage，上传不会发送到任何服务器），适合本地体验。<br>
         ② 高德 Key 注册：lbs.amap.com → 控制台 → 创建应用 → 添加“Web服务”Key（个人开发者免费）。<br>
-        ③ 真 GPS 需要 HTTPS：部署到 Vercel 后手机访问即可。<br>
+        ③ 真 GPS 需要 HTTPS：部署到 CloudBase（自带 https）后手机访问即可。<br>
         ④ 本地双击 index.html 无定位权限，可用“模拟演示”体验完整流程。
       </div>
     </div>
@@ -545,6 +570,7 @@ backBtn.onclick = function(){
   if(cur === "page-list"){ go("home"); stopSpeak(); player.classList.remove("show"); }
   else if(cur === "page-detail"){ go("list"); stopSpeak(); player.classList.remove("show"); }
   else if(cur === "page-map"){ stopGuideSpeak(); stopGuideTimer(); stopGPS(); go("guide"); }
+  else if(cur === "page-automap"){ go("guide"); }
   else if(cur === "page-guide"){ go("home"); }
   else if(cur === "page-free"){ stopFreeGPS(); go("home"); }
   else if(cur === "page-settings"){ go("home"); }
@@ -693,10 +719,19 @@ function toastMsg(t){
  * ============================================================ */
 var SETTINGS_KEY = "spotguide_settings";
 var LIB_KEY = "spotguide_lib";
-var DEFAULT_SETTINGS = { deepseekKey:"", amapKey:"", proxyUrl:"", amapProxy:"" };
+var DEFAULT_SETTINGS = {
+  deepseekKey:"", amapKey:"",
+  proxyUrl:"https://guide-d4grybdwde2f9d281-1432633719.ap-shanghai.app.tcloudbase.com/deepseek",
+  amapProxy:"https://guide-d4grybdwde2f9d281-1432633719.ap-shanghai.app.tcloudbase.com/geocode"
+};
 function loadSettings(){
-  try{ return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")); }
-  catch(e){ return Object.assign({}, DEFAULT_SETTINGS); }
+  var saved = {};
+  try{ saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}"); }catch(e){ saved = {}; }
+  var s = Object.assign({}, DEFAULT_SETTINGS, saved);
+  // 兼容：未配置过代理时，自动填入当前部署的默认代理地址（腾讯云 CloudBase）
+  if(!s.proxyUrl && DEFAULT_SETTINGS.proxyUrl) s.proxyUrl = DEFAULT_SETTINGS.proxyUrl;
+  if(!s.amapProxy && DEFAULT_SETTINGS.amapProxy) s.amapProxy = DEFAULT_SETTINGS.amapProxy;
+  return s;
 }
 function saveSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 function openSettings(){
@@ -830,13 +865,14 @@ function extractName(geo){
 /* ============================================================
  *  DeepSeek AI 生成讲解
  * ============================================================ */
-function deepseekChat(prompt){
+function deepseekChat(prompt, opts){
+  opts = opts || {};
   var s = loadSettings();
   var messages = [
     { role:"system", content:"你是一位严谨可靠的中文写作助手，擅长文旅讲解。" },
     { role:"user", content: prompt }
   ];
-  var payload = { model:"deepseek-chat", messages:messages, temperature:0.8, max_tokens:1000 };
+  var payload = { model:"deepseek-chat", messages:messages, temperature:0.8, max_tokens: opts.maxTokens || 1000 };
   var headers = { "Content-Type":"application/json" };
   var url;
   if(s.proxyUrl){
@@ -1152,6 +1188,201 @@ var GUIDE_AREAS = [
   }
 ];
 
+/* ============================================================
+ *  自动生成景区地图（AI 补全地图版）
+ *  流程：高德POI搜索 → DeepSeek批量讲解 → 自动画图 → 存库
+ * ============================================================ */
+var AUTO_AREAS_KEY = "spotguide_auto_areas";
+function loadAutoAreas(){
+  try{ return JSON.parse(localStorage.getItem(AUTO_AREAS_KEY)||"[]"); }catch(e){ return []; }
+}
+function saveAutoAreas(list){ localStorage.setItem(AUTO_AREAS_KEY, JSON.stringify(list)); }
+function mergeAutoAreas(){
+  var auto = loadAutoAreas();
+  var ids = {}; GUIDE_AREAS.forEach(function(a){ ids[a.id]=1; });
+  var added = auto.filter(function(a){ return !ids[a.id]; });
+  if(added.length) GUIDE_AREAS = added.concat(GUIDE_AREAS);
+}
+function openAutoMapPage(){
+  player.classList.remove("show"); stopSpeak();
+  $("autoName").value = "";
+  $("autoProgress").style.display = "none";
+  $("autoProgress").innerHTML = "";
+  $("autoResult").innerHTML = "";
+  go("automap");
+}
+function setAutoStep(html, cls){
+  var box = $("autoProgress");
+  box.style.display = "block";
+  var d = document.createElement("div");
+  d.className = "auto-step"+(cls ? " "+cls : "");
+  d.innerHTML = html;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+function poiSearch(keywords, city){
+  return new Promise(function(resolve){
+    var s = loadSettings();
+    if(!s.amapProxy){ toastMsg("未配置高德代理地址，请先在设置里填高德代理"); resolve(null); return; }
+    var u = s.amapProxy;
+    if(/\/api\/(deepseek|geocode|poi)$/.test(u)) u += ".js";
+    var sep = u.indexOf("?") > -1 ? "&" : "?";
+    fetch(u + sep + "keywords=" + encodeURIComponent(keywords) + (city ? "&city=" + encodeURIComponent(city) : "") + "&offset=25")
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d && d.data && d.data.poi && d.data.poi.pois) resolve(d.data.poi.pois);
+        else resolve(null);
+      })
+      .catch(function(){ resolve(null); });
+    setTimeout(function(){ resolve(null); }, 15000);
+  });
+}
+function detectCity(name){
+  return new Promise(function(resolve){
+    var s = loadSettings();
+    if(!s.amapProxy){ resolve(""); return; }
+    var u = s.amapProxy;
+    if(/\/api\/(deepseek|geocode|poi)$/.test(u)) u += ".js";
+    var sep = u.indexOf("?") > -1 ? "&" : "?";
+    fetch(u + sep + "keywords=" + encodeURIComponent(name) + "&offset=5")
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var pois = (d && d.data && d.data.poi && d.data.poi.pois) || [];
+        resolve(pois[0] ? (pois[0].cityname || pois[0].pname || "") : "");
+      })
+      .catch(function(){ resolve(""); });
+    setTimeout(function(){ resolve(""); }, 10000);
+  });
+}
+function isScenicType(t){
+  return /风景名胜|旅游|公园|文物|寺庙|古迹|遗址|广场|博物馆|纪念馆|园林|古镇|塔|桥|湖|山|岛|洞|瀑布|温泉|故居|教堂|寺|观|宫|殿|园/.test(t||"");
+}
+function pickEmoji(type){
+  var t = type || "";
+  if(/寺|庙|观|教堂/.test(t)) return "🛕";
+  if(/湖|江|河|海|泉|瀑布/.test(t)) return "💧";
+  if(/山|峰|洞|崖/.test(t)) return "⛰️";
+  if(/公园|园|林|镇/.test(t)) return "🌳";
+  if(/塔|楼|阁/.test(t)) return "🗼";
+  if(/桥/.test(t)) return "🌉";
+  if(/博物馆|纪念馆|故居|文物|遗址|古迹/.test(t)) return "🏛️";
+  if(/广场/.test(t)) return "🏟️";
+  if(/岛/.test(t)) return "🏝️";
+  return "📍";
+}
+function aiBatchScripts(areaName, spotNames){
+  var list = spotNames.map(function(n,i){ return (i+1)+"."+n; }).join("\n");
+  var prompt =
+    "你是资深中文景区讲解员。请为景区【"+areaName+"】内的以下讲解点，各写一段简短讲解词。\n讲解点列表：\n"+list+"\n"+
+    "要求：\n"+
+    "1. 只输出一个JSON数组，不要任何其他文字、不要Markdown代码块；\n"+
+    "2. 数组元素格式：[{\"name\":\"讲解点名称(必须与列表完全一致)\",\"script\":\"讲解词\"}]；\n"+
+    "3. 每段讲解词约120-180字，口语化、亲切，像当面讲解；开头可用“各位朋友”等称呼；\n"+
+    "4. 不确定的事实用“据说”“相传”等表述，严禁编造史实；\n"+
+    "5. 数量必须与列表一致。";
+  return deepseekChat(prompt, { maxTokens: 4000 }).then(function(text){
+    var cleaned = String(text||"").replace(/```json|```/g,"").trim();
+    var start = cleaned.indexOf("["), end = cleaned.lastIndexOf("]");
+    if(start > -1 && end > start){ cleaned = cleaned.slice(start, end+1); }
+    return JSON.parse(cleaned);
+  });
+}
+async function buildAutoArea(){
+  var name = $("autoName").value.trim();
+  if(!name){ toastMsg("请输入景区名称"); return; }
+  var btn = $("autoBuild");
+  btn.disabled = true; btn.textContent = "⏳ 生成中…";
+  $("autoProgress").innerHTML = ""; $("autoResult").innerHTML = "";
+  $("autoProgress").style.display = "block";
+  try{
+    setAutoStep("🔍 正在识别景区所在城市…");
+    var city = await detectCity(name);
+    if(city) setAutoStep("📍 城市："+esc(city)+" ✅","done");
+    setAutoStep("🗺️ 正在搜索景区内关键景点（高德POI）…");
+    var pois1 = await poiSearch(name, city);
+    var pois = pois1 || [];
+    if(pois.length < 3){
+      var pois2 = await poiSearch(name, "");
+      pois = (pois2 && pois2.length > pois.length) ? pois2 : pois;
+    }
+    if(!pois.length){ throw new Error("高德没有搜到该名称，请换个写法（如：杭州西湖 而不是 杭州）"); }
+    var seen = {}, spots = [];
+    pois.forEach(function(p){
+      var nm = (p.name||"").trim();
+      if(!nm || seen[nm]) return;
+      var loc = (p.location||"").split(",");
+      var lng = parseFloat(loc[0]), lat = parseFloat(loc[1]);
+      if(!isFinite(lat)||!isFinite(lng)) return;
+      if(nm === name) return;
+      seen[nm] = 1;
+      spots.push({ name:nm, lat:lat, lng:lng, type:p.type||"", address:p.address||"" });
+    });
+    spots.sort(function(a,b){ return (isScenicType(b.type)?1:0)-(isScenicType(a.type)?1:0); });
+    spots = spots.slice(0,12);
+    if(spots.length < 3){ throw new Error("搜到的讲解点太少（"+spots.length+"个），请换更具体的景区名（如：杭州西湖 而不是 杭州）"); }
+    setAutoStep("✅ 找到 "+spots.length+" 个讲解点","done");
+    spots.forEach(function(s){
+      setAutoStep("　📍 "+esc(s.name)+(isScenicType(s.type)?" <small>· 景区</small>":""));
+    });
+    // 计算地图范围（真实经纬度 → 画布百分比）
+    var minLat=1e9,maxLat=-1e9,minLng=1e9,maxLng=-1e9;
+    spots.forEach(function(s){
+      if(s.lat<minLat)minLat=s.lat; if(s.lat>maxLat)maxLat=s.lat;
+      if(s.lng<minLng)minLng=s.lng; if(s.lng>maxLng)maxLng=s.lng;
+    });
+    var padLat=Math.max((maxLat-minLat)*0.15,0.0015);
+    var padLng=Math.max((maxLng-minLng)*0.15,0.0015);
+    minLat-=padLat; maxLat+=padLat; minLng-=padLng; maxLng+=padLng;
+    var spanLat=maxLat-minLat, spanLng=maxLng-minLng;
+    var center={ lat:(minLat+maxLat)/2, lng:(minLng+maxLng)/2 };
+    function toXY(lat,lng){ return [ Math.max(4,Math.min(96,((lng-minLng)/spanLng)*100)), Math.max(4,Math.min(96,((maxLat-lat)/spanLat)*100)) ]; }
+    setAutoStep("🤖 正在用 DeepSeek 生成各点讲解词…");
+    var scriptMap = {};
+    try{
+      var names = spots.map(function(s){ return s.name; });
+      var chunks = [];
+      for(var ci=0; ci<names.length; ci+=5){ chunks.push(names.slice(ci, ci+5)); }
+      for(var ci2=0; ci2<chunks.length; ci2++){
+        setAutoStep("　🤖 讲解词生成中（"+(ci2+1)+"/"+chunks.length+"）…");
+        var arr = await aiBatchScripts(name, chunks[ci2]);
+        if(Array.isArray(arr)){
+          arr.forEach(function(it){ if(it && it.name) scriptMap[it.name] = it.script; });
+        }
+      }
+    }catch(e){
+      setAutoStep("⚠️ AI 批量生成失败，已用备用讲解词（检查 DeepSeek 代理/Key 后可重新生成）","fail");
+    }
+    var area = {
+      id:"auto_"+Date.now(),
+      name:name, icon:"🗺️",
+      desc:"自动生成 · "+spots.length+"个讲解点 · 触发半径约60米",
+      auto:true, center:center, span:{lat:spanLat, lng:spanLng},
+      spots: spots.map(function(s,i){
+        var xy=toXY(s.lat,s.lng);
+        return {
+          id:"p"+(i+1), name:s.name, emoji:pickEmoji(s.type),
+          x:xy[0], y:xy[1], r:6, lat:s.lat, lng:s.lng, address:s.address,
+          script: scriptMap[s.name] || ("欢迎来到"+name+"。"+s.name+"是这里一个值得停留的看点。"+(s.address?"地址："+s.address+"。":"")+"漫步其间，感受当地的自然与人文之美，祝您旅途愉快。")
+        };
+      }),
+      route: spots.map(function(s){ return toXY(s.lat,s.lng); })
+    };
+    var auto = loadAutoAreas();
+    auto.unshift(area);
+    saveAutoAreas(auto);
+    GUIDE_AREAS.unshift(area);
+    setAutoStep("💾 已存入「仿真人导游」列表，正在打开地图…","done");
+    setTimeout(function(){ openMap(area.id); toastMsg("景区地图已自动生成！"); }, 400);
+  }catch(e){
+    setAutoStep("❌ "+(e&&e.message||e),"fail");
+    toastMsg("生成失败："+(e&&e.message||e));
+  }finally{
+    btn.disabled = false; btn.textContent = "⚡ 自动生成地图 + 讲解";
+  }
+}
+$("autoBuild").onclick = function(){ buildAutoArea(); };
+$("autoName").addEventListener("keydown", function(e){ if(e.key === "Enter") buildAutoArea(); });
+
 var guideEntry=$("guideEntry"), guideAreaList=$("guideAreaList"),
     mapSvg=$("mapSvg"), mapModes=$("mapModes"), gStart=$("gStart"), gReset=$("gReset"),
     guideBubble=$("guideBubble"), gbName=$("gbName"), gbText=$("gbText"),
@@ -1165,6 +1396,12 @@ guideEntry.onclick=function(){ renderGuideAreas(); go("guide"); player.classList
 
 function renderGuideAreas(){
   guideAreaList.innerHTML="";
+  var autoCard=document.createElement("div");
+  autoCard.className="area-card";
+  autoCard.style.background="linear-gradient(135deg,#eef7ee,#dff0df)";
+  autoCard.innerHTML='<div class="ac-ico">✨</div><div class="ac-b"><div class="ac-n">自动生成新景区</div><div class="ac-d">陌生景区也能用：输入名称 → 自动搜点 + AI讲解 + 画地图</div></div><div class="ac-go">＋</div>';
+  autoCard.onclick=function(){ openAutoMapPage(); };
+  guideAreaList.appendChild(autoCard);
   GUIDE_AREAS.forEach(function(a){
     var d=document.createElement("div");
     d.className="area-card";
@@ -1232,7 +1469,19 @@ function drawMap(){
   var svg=mapSvg; svg.innerHTML="";
   function add(name,attrs){ var e=elSVG(name,attrs); svg.appendChild(e); return e; }
   var a=currentArea;
-  if(a.id==="gugong"){
+  if(a.auto){
+    // 自动生成的地图：柔和底图 + 散点装饰 + 路径由下面通用代码画
+    add("rect",{x:2,y:2,width:96,height:96,rx:8,fill:"#e7f0dc",stroke:"#bcd4a8","stroke-width":0.6});
+    add("ellipse",{cx:50,cy:50,rx:44,ry:44,fill:"rgba(255,255,255,.35)"});
+    // 装饰树丛（按景点位置偏移，营造手绘感）
+    a.spots.forEach(function(s,i){
+      var ox=((i*7)%13)-6, oy=((i*11)%13)-6;
+      add("circle",{cx:Math.max(3,Math.min(97,s.x+ox)),cy:Math.max(3,Math.min(97,s.y+oy)),r:2.2,fill:"#bcd9a8",opacity:.7});
+      add("circle",{cx:Math.max(3,Math.min(97,s.x-ox)),cy:Math.max(3,Math.min(97,s.y-oy)),r:1.8,fill:"#cfe4b8",opacity:.6});
+    });
+    // 虚线网格，让地图更有“底图感”
+    add("path",{d:"M20,0 L20,100 M40,0 L40,100 M60,0 L60,100 M80,0 L80,100 M0,20 L100,20 M0,40 L100,40 M0,60 L100,60 M0,80 L100,80",stroke:"rgba(120,150,110,.25)","stroke-width":0.4});
+  } else if(a.id==="gugong"){
     add("rect",{x:2,y:2,width:96,height:96,rx:8,fill:"#b9d6ee",stroke:"#8fb4d4","stroke-width":0.6});   // 护城河
     add("rect",{x:7,y:7,width:86,height:86,rx:5,fill:"#eecfae",stroke:"#c08a55","stroke-width":0.8});   // 城墙
     add("rect",{x:11,y:11,width:78,height:78,rx:3,fill:"#faf1e0"});                                    // 内城
@@ -1484,6 +1733,7 @@ $("installBtn").onclick = function(){
 };
 
 /* ---------- 启动 ---------- */
+mergeAutoAreas();
 renderCities(APP_DATA);
 renderLib();
 
