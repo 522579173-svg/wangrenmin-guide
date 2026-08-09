@@ -894,22 +894,57 @@ if("speechSynthesis" in window && ttsState() !== null){
 
 /* ---------- 搜索 ---------- */
 function doSearch(){
-  var q = kw.value.trim().toLowerCase();
+  var raw = kw.value.trim();
+  var q = raw.toLowerCase();
   if(!q){ renderCities(APP_DATA); toastMsg("请输入关键词"); return; }
+
+  /* ① 城市 */
   var hitCities = APP_DATA.filter(function(c){
     return c.name.toLowerCase().indexOf(q) > -1;
   });
-  if(hitCities.length){ renderCities(hitCities); go("home"); toastMsg("找到城市："+hitCities.map(function(c){return c.name;}).join("、")); return; }
+  if(hitCities.length){
+    renderCities(hitCities); go("home");
+    toastMsg("找到城市："+hitCities.map(function(c){return c.name;}).join("、"));
+    return;
+  }
+
+  /* ② 5城15景内置景点 */
   var hitSpots = flat.filter(function(s){
-    return (s.name+s.cityName+s.summary+s.intro).toLowerCase().indexOf(q) > -1;
+    return (s.name+s.cityName+s.summary+s.intro+s.location).toLowerCase().indexOf(q) > -1;
   });
   if(hitSpots.length){
-    listTitle.textContent = "搜索“"+kw.value+"”结果（"+hitSpots.length+"个）";
+    listTitle.textContent = "搜索“"+raw+"”结果（"+hitSpots.length+"个）";
     renderSpots(hitSpots);
     go("list");
-  } else {
-    toastMsg("没有找到“"+kw.value+"”，可检查关键词或去数据区添加");
+    return;
   }
+
+  /* ③ 仿真人导游景区（含手机上自动生成保存的地图） */
+  var hitAreas = GUIDE_AREAS.filter(function(a){
+    var text = (a.name||"")+(a.desc||"");
+    (a.spots||[]).forEach(function(s){ text += (s.name||"")+(s.address||""); });
+    return text.toLowerCase().indexOf(q) > -1;
+  });
+  if(hitAreas.length){
+    openMap(hitAreas[0].id);
+    toastMsg("已找到导游地图："+hitAreas[0].name);
+    return;
+  }
+
+  /* ④ 未收录不再只报“没找到”：自动转到智能自由导览，交给AI生成 */
+  go("free");
+  player.classList.remove("show");
+  stopSpeak();
+  renderLib();
+  $("fsState").textContent = "搜索识别（非真实GPS）";
+  $("fsPlace").textContent = raw;
+  $("fsCoord").textContent = "搜索";
+  $("fsSource").textContent = "未收录 · 可AI生成";
+  $("freeSimKw").value = raw;
+  $("freeResult").innerHTML = "";
+  var item = { name:raw, address:"搜索地点", lat:0, lng:0, auto:false };
+  ensureFreeGuide(item, 0, 0);
+  toastMsg("“"+raw+"”未在内置库中，已转到AI智能导览");
 }
 $("searchBtn").onclick = doSearch;
 kw.addEventListener("keydown", function(e){ if(e.key === "Enter") doSearch(); });
