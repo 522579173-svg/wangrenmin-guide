@@ -1343,6 +1343,42 @@ function shouldAutoGenerate(item){
   freeAutoGenerating = key;
   return key;
 }
+/* GPS陌生地点自动建导游地图：不依赖输入框，成功后保存到仿真人导游列表；同一名称30分钟只尝试一次 */
+var autoMapBuilding = {}, autoMapTried = {};
+var AUTO_MAP_RETRY_MS = 30 * 60 * 1000;
+function findGuideAreaByName(name){
+  var n = String(name||"").toLowerCase();
+  for(var i=0;i<GUIDE_AREAS.length;i++){
+    var an = String(GUIDE_AREAS[i].name||"").toLowerCase();
+    if(an.indexOf(n)>-1 || n.indexOf(an)>-1) return GUIDE_AREAS[i];
+  }
+  return null;
+}
+function autoBuildAreaFromGPS(item){
+  if(!item || !item.auto || !item.name) return Promise.resolve(null);
+  if(findGuideAreaByName(item.name)) return Promise.resolve(null);
+  var s = loadSettings();
+  if(!s.amapProxy || (!s.deepseekKey && !s.proxyUrl)) return Promise.resolve(null);
+  var key = item.name.toLowerCase();
+  if(autoMapBuilding[key]) return autoMapBuilding[key];
+  var last = autoMapTried[key] || 0;
+  if(Date.now()-last < AUTO_MAP_RETRY_MS) return Promise.resolve(null);
+  autoMapTried[key] = Date.now();
+  $("fsState").textContent = "正在后台生成导游地图…";
+  var job = buildAutoArea(item.name, {background:true}).then(function(area){
+    if(area){
+      $("fsState").textContent = "📍 跟随中 · 导游地图已生成";
+      toastMsg("“"+area.name+"”导游地图已自动生成，可到仿真人导游中打开");
+    }
+    return area;
+  }).catch(function(){
+    $("fsState").textContent = "📍 跟随中 · 地图生成失败可手动重试";
+    return null;
+  }).finally(function(){ delete autoMapBuilding[key]; });
+  autoMapBuilding[key] = job;
+  return job;
+}
+
 function matchBuiltin(name, address){
   var text = ((name||"")+" "+(address||"")).toLowerCase();
   var best=null, bestScore=0;
@@ -1382,7 +1418,10 @@ function ensureFreeGuide(item, lat, lng){
     toastMsg("发现陌生地点“"+item.name+"”，正在自动生成讲解");
     /* 下一帧再生成，保证“正在生成”状态先显示出来 */
     setTimeout(function(){
-      doGenerate(item, lat, lng, false, true).finally(function(){
+      /* 两条链并行：当前地点讲解 + 景区导游地图；地图链不依赖输入框 */
+      var guideJob = doGenerate(item, lat, lng, false, true);
+      var mapJob = autoBuildAreaFromGPS(item);
+      Promise.allSettled([guideJob, mapJob]).finally(function(){
         if(freeAutoGenerating === autoKey) freeAutoGenerating = "";
       });
     }, 50);
@@ -1592,6 +1631,8 @@ function openAutoMapPage(){
 }
 function setAutoStep(html, cls){
   var box = $("autoProgress");
+  /* GPS 后台自动建图时不在自动地图页，避免悄悄堆积不可见进度卡 */
+  if(!box || !$("page-automap").classList.contains("active")) return;
   box.style.display = "block";
   var d = document.createElement("div");
   d.className = "auto-step"+(cls ? " "+cls : "");
@@ -1676,13 +1717,17 @@ function aiBatchScripts(areaName, spotNames){
     return JSON.parse(cleaned);
   });
 }
-async function buildAutoArea(){
-  var name = $("autoName").value.trim();
-  if(!name){ toastMsg("请输入景区名称"); return; }
+async function buildAutoArea(nameOverride, options){
+  options = options || {};
+  var background = !!options.background;
+  var name = String(nameOverride || $("autoName").value || "").trim();
+  if(!name){ toastMsg("请输入景区名称"); return null; }
   var btn = $("autoBuild");
-  btn.disabled = true; btn.textContent = "⏳ 生成中…";
-  $("autoProgress").innerHTML = ""; $("autoResult").innerHTML = "";
-  $("autoProgress").style.display = "block";
+  if(!background){
+    btn.disabled = true; btn.textContent = "⏳ 生成中…";
+    $("autoProgress").innerHTML = ""; $("autoResult").innerHTML = "";
+    $("autoProgress").style.display = "block";
+  }
   try{
     setAutoStep("🔍 正在识别景区所在城市…");
     var city = await detectCity(name);
@@ -1771,18 +1816,26 @@ async function buildAutoArea(){
     GUIDE_AREAS = GUIDE_AREAS.filter(function(a){ return a.name !== area.name; });
     GUIDE_AREAS.unshift(area);
     setAutoStep("💾 已存入「仿真人导游」列表，正在打开地图…","done");
-    /* 立即打开，避免按钮先恢复后用户误以为生成失败；toast 下一帧显示 */
+    if(background){
+      renderGuideAreas();
+      return area;
+    }
+    /* 手动生成：立即打开地图，避免按钮先恢复后用户误以为生成失败 */
     openMap(area.id);
     setTimeout(function(){ toastMsg("景区地图已自动生成！"); }, 50);
+    return area;
   }catch(e){
-    setAutoStep("❌ "+(e&&e.message||e),"fail");
-    toastMsg("生成失败："+(e&&e.message||e));
+    if(!background){
+      setAutoStep("❌ "+(e&&e.message||e),"fail");
+      toastMsg("生成失败："+(e&&e.message||e));
+    }
+    throw e;
   }finally{
-    btn.disabled = false; btn.textContent = "⚡ 自动生成地图 + 讲解";
+    if(!background){ btn.disabled = false; btn.textContent = "⚡ 自动生成地图 + 讲解"; }
   }
 }
-$("autoBuild").onclick = function(){ buildAutoArea(); };
-$("autoName").addEventListener("keydown", function(e){ if(e.key === "Enter") buildAutoArea(); });
+$("autoBuild").onclick = function(){ buildAutoArea().catch(function(){}); };
+$("autoName").addEventListener("keydown", function(e){ if(e.key === "Enter") buildAutoArea().catch(function(){}); });
 
 var guideEntry=$("guideEntry"), guideAreaList=$("guideAreaList"),
     mapSvg=$("mapSvg"), mapModes=$("mapModes"), gStart=$("gStart"), gReset=$("gReset"),
