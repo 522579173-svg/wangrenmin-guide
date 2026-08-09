@@ -308,9 +308,10 @@
       </div>
       <div class="map-controls">
         <button class="gc-btn main" id="autoBuild">⚡ 自动生成地图 + 讲解</button>
+        <button class="gc-btn" id="autoBuildHere">📍 用当前位置自动生成</button>
       </div>
       <div class="hint" id="autoHint">
-        原理：① 高德搜索景区内关键景点（真实坐标）→ ② DeepSeek 为每个景点生成讲解词 → ③ 自动画手绘地图并放置讲解点 → ④ 存入「仿真人导游」列表，以后直接使用。讲解词已缓存，之后无需联网 AI 也能再播。
+        可输入景区名称，也可点“用当前位置自动生成”：App 会自动定位、识别景区名称、搜索讲解点并生成地图。
       </div>
     </div>
     <div id="autoProgress" style="display:none;"></div>
@@ -1365,7 +1366,8 @@ function autoBuildAreaFromGPS(item){
   if(Date.now()-last < AUTO_MAP_RETRY_MS) return Promise.resolve(null);
   autoMapTried[key] = Date.now();
   $("fsState").textContent = "正在后台生成导游地图…";
-  var job = buildAutoArea(item.name, {background:true}).then(function(area){
+  var anchor = { name:item.name, address:item.address||"", lat:item.lat, lng:item.lng };
+  var job = buildAutoArea(item.name, {background:true, anchor:anchor}).then(function(area){
     if(area){
       $("fsState").textContent = "📍 跟随中 · 导游地图已生成";
       toastMsg("“"+area.name+"”导游地图已自动生成，可到仿真人导游中打开");
@@ -1404,9 +1406,13 @@ function ensureFreeGuide(item, lat, lng){
   if(lib){
     $("fsSource").textContent = "我的讲解库（AI生成）";
     renderFreeResult({ type:"lib", lib:lib, item:item, lat:lat, lng:lng });
-    if(item.auto && freeAutoPlay){
-      var d = haversine(lat,lng,lib.lat||0,lib.lng||0);
-      if(d < 120){ toastMsg("已到「"+lib.name+"」，自动开讲"); speakFree(lib.script); }
+    if(item.auto){
+      /* 旧版本已经缓存了讲解也不能提前结束：地图可能尚未生成，继续后台补建 */
+      autoBuildAreaFromGPS(item);
+      if(freeAutoPlay){
+        var d = haversine(lat,lng,lib.lat||0,lib.lng||0);
+        if(d < 120){ toastMsg("已到「"+lib.name+"」，自动开讲"); speakFree(lib.script); }
+      }
     }
     return;
   }
@@ -1739,7 +1745,9 @@ async function buildAutoArea(nameOverride, options){
       var pois2 = await poiSearch(name, "");
       pois = (pois2 && pois2.length > pois.length) ? pois2 : pois;
     }
-    if(!pois.length){ throw new Error("高德没有搜到该名称，请换个写法（如：杭州西湖 而不是 杭州）"); }
+    if(!pois.length && !(options.anchor && isFinite(options.anchor.lat) && isFinite(options.anchor.lng))){
+      throw new Error("高德没有搜到该名称，请换个写法（如：杭州西湖 而不是 杭州）");
+    }
     var seen = {}, spots = [];
     pois.forEach(function(p){
       var nm = (p.name||"").trim();
@@ -1759,8 +1767,18 @@ async function buildAutoArea(nameOverride, options){
       return bs-as;
     });
     spots = spots.slice(0,12);
-    /* 小景区 2 个有效讲解点也能生成，避免因高德只收录少量 POI 而整条链路失败 */
-    if(spots.length < 2){ throw new Error("搜到的有效讲解点太少（"+spots.length+"个），请换更完整的名称（如：南京夫子庙景区）"); }
+    /* 高德完全搜不到时，GPS当前位置仍作为单点地图，不能让陌生地点只剩一张讲解卡 */
+    if(!spots.length && options.anchor && isFinite(options.anchor.lat) && isFinite(options.anchor.lng)){
+      spots.push({
+        name: options.anchor.name || name,
+        lat: options.anchor.lat,
+        lng: options.anchor.lng,
+        type: "GPS当前位置;景点",
+        address: options.anchor.address || ""
+      });
+    }
+    /* 小景区 1 个有效讲解点也允许生成 */
+    if(spots.length < 1){ throw new Error("高德没有搜到有效讲解点，请稍后重试或手动输入更完整的景区名称"); }
     setAutoStep("✅ 找到 "+spots.length+" 个讲解点","done");
     spots.forEach(function(s){
       setAutoStep("　📍 "+esc(s.name)+(isScenicType(s.type)?" <small>· 景区</small>":""));
@@ -1836,6 +1854,27 @@ async function buildAutoArea(nameOverride, options){
 }
 $("autoBuild").onclick = function(){ buildAutoArea().catch(function(){}); };
 $("autoName").addEventListener("keydown", function(e){ if(e.key === "Enter") buildAutoArea().catch(function(){}); });
+$("autoBuildHere").onclick = function(){
+  if(!navigator.geolocation || !window.isSecureContext){
+    toastMsg("当前位置自动生成需要HTTPS和定位权限；也可以直接输入景区名称");
+    return;
+  }
+  var b = $("autoBuildHere"); b.disabled = true; b.textContent = "⏳ 正在定位…";
+  navigator.geolocation.getCurrentPosition(async function(pos){
+    try{
+      var geo = await reverseGeo(pos.coords.latitude, pos.coords.longitude);
+      var address = geo ? geo.address : "";
+      var name = extractName(geo) || address;
+      if(!name) throw new Error("没有识别出当前位置景区名称，请直接输入名称");
+      $("autoName").value = name;
+      await buildAutoArea(name, {anchor:{name:name,address:address,lat:pos.coords.latitude,lng:pos.coords.longitude}});
+    }catch(e){ toastMsg("当前位置生成失败："+(e.message||e)); }
+    finally{ b.disabled=false; b.textContent="📍 用当前位置自动生成"; }
+  }, function(){
+    b.disabled=false; b.textContent="📍 用当前位置自动生成";
+    toastMsg("定位失败，请允许定位或直接输入景区名称");
+  }, {enableHighAccuracy:true,maximumAge:10000,timeout:12000});
+};
 
 var guideEntry=$("guideEntry"), guideAreaList=$("guideAreaList"),
     mapSvg=$("mapSvg"), mapModes=$("mapModes"), gStart=$("gStart"), gReset=$("gReset"),
