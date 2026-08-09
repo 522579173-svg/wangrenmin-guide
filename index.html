@@ -1328,6 +1328,21 @@ async function onFreePosition(lat,lng){
 }
 
 /* 三级自动补全：内置库 → 个人库 → AI生成 */
+/* GPS 到陌生地点后自动生成；同一地点 10 分钟内只自动尝试一次，防定位抖动重复扣费 */
+var freeAutoGenerating = "", freeAutoTried = {};
+var FREE_AUTO_RETRY_MS = 10 * 60 * 1000;
+function shouldAutoGenerate(item){
+  if(!item || !item.auto || !item.name) return false;
+  var s = loadSettings();
+  if(!s.deepseekKey && !s.proxyUrl) return false;
+  var key = (item.name+"|"+(item.address||"")).toLowerCase();
+  if(freeAutoGenerating === key) return false;
+  var last = freeAutoTried[key] || 0;
+  if(Date.now() - last < FREE_AUTO_RETRY_MS) return false;
+  freeAutoTried[key] = Date.now();
+  freeAutoGenerating = key;
+  return key;
+}
 function matchBuiltin(name, address){
   var text = ((name||"")+" "+(address||"")).toLowerCase();
   var best=null, bestScore=0;
@@ -1359,8 +1374,19 @@ function ensureFreeGuide(item, lat, lng){
     }
     return;
   }
-  $("fsSource").textContent = "未收录 · 可AI生成";
+  $("fsSource").textContent = "未收录 · 准备AI自动生成";
   renderFreeResult({ type:"new", item:item, lat:lat, lng:lng });
+  var autoKey = shouldAutoGenerate(item);
+  if(autoKey){
+    $("fsSource").textContent = "AI 正在自动生成讲解…";
+    toastMsg("发现陌生地点“"+item.name+"”，正在自动生成讲解");
+    /* 下一帧再生成，保证“正在生成”状态先显示出来 */
+    setTimeout(function(){
+      doGenerate(item, lat, lng, false, true).finally(function(){
+        if(freeAutoGenerating === autoKey) freeAutoGenerating = "";
+      });
+    }, 50);
+  }
 }
 
 /* 自由导览识别结果：与「5城15景」详情统一为 景点简介/讲解词/小贴士 三卡片样式 */
@@ -1420,10 +1446,10 @@ function renderFreeResult(r){
 }
 
 /* AI 生成并存入讲解库 */
-async function doGenerate(item, lat, lng, isRegen){
+async function doGenerate(item, lat, lng, isRegen, isAuto){
   var btn = $("frGen") || $("frRe");
-  if(btn){ btn.disabled = true; btn.textContent = "⏳ AI 生成中…"; }
-  $("fsSource").textContent = "AI 生成中…";
+  if(btn){ btn.disabled = true; btn.textContent = isAuto ? "⏳ 正在自动生成…" : "⏳ AI 生成中…"; }
+  $("fsSource").textContent = isAuto ? "AI 正在自动生成讲解…" : "AI 生成中…";
   try{
     var script = await aiGenerateGuide(item.name, item.address, lat, lng);
     var entry = {
@@ -1442,7 +1468,9 @@ async function doGenerate(item, lat, lng, isRegen){
     toastMsg("讲解已生成并存入“我的讲解库”");
     speakFree(script);
   }catch(e){
+    $("fsSource").textContent = isAuto ? "自动生成失败 · 可手动重试" : "AI 生成失败 · 请重试";
     if(btn){ btn.disabled = false; btn.textContent = isRegen ? "🔄 重新生成" : "🤖 AI 生成并讲解"; }
+    if(isAuto) toastMsg("自动生成失败，可点击“AI生成并讲解”手动重试");
   }
 }
 
@@ -1608,6 +1636,16 @@ function detectCity(name){
 function isScenicType(t){
   return /风景名胜|旅游|公园|文物|寺庙|古迹|遗址|广场|博物馆|纪念馆|园林|古镇|塔|桥|湖|山|岛|洞|瀑布|温泉|故居|教堂|寺|观|宫|殿|园/.test(t||"");
 }
+/* 自动地图排除酒店、地铁、商场等“搜到了但不能讲”的无关 POI */
+function isNoisePoi(p){
+  var text = ((p&&p.name)||"")+" "+((p&&p.type)||"");
+  return /酒店|宾馆|旅馆|民宿|地铁站|公交站|停车场|售票处|游客中心|旅行社|房地产|住宅|小区|市场|商场|餐饮|饭店|便利店|银行|厕所|充电站|出入口/.test(text);
+}
+function poiNameRelated(name, areaName){
+  var a = String(areaName||"").replace(/景区|风景区|旅游区|国家公园/g, "");
+  var n = String(name||"");
+  return !!a && (n.indexOf(a)>-1 || a.indexOf(n)>-1);
+}
 function pickEmoji(type){
   var t = type || "";
   if(/寺|庙|观|教堂/.test(t)) return "🛕";
@@ -1660,17 +1698,24 @@ async function buildAutoArea(){
     var seen = {}, spots = [];
     pois.forEach(function(p){
       var nm = (p.name||"").trim();
-      if(!nm || seen[nm]) return;
+      if(!nm || seen[nm] || isNoisePoi(p)) return;
       var loc = (p.location||"").split(",");
       var lng = parseFloat(loc[0]), lat = parseFloat(loc[1]);
       if(!isFinite(lat)||!isFinite(lng)) return;
       if(nm === name) return;
+      /* 优先保留景区类 POI；非景区类必须与景区名称相关，避免混入远处无关店铺 */
+      if(!isScenicType(p.type) && !poiNameRelated(nm, name)) return;
       seen[nm] = 1;
       spots.push({ name:nm, lat:lat, lng:lng, type:p.type||"", address:p.address||"" });
     });
-    spots.sort(function(a,b){ return (isScenicType(b.type)?1:0)-(isScenicType(a.type)?1:0); });
+    spots.sort(function(a,b){
+      var as = (isScenicType(a.type)?2:0)+(poiNameRelated(a.name,name)?1:0);
+      var bs = (isScenicType(b.type)?2:0)+(poiNameRelated(b.name,name)?1:0);
+      return bs-as;
+    });
     spots = spots.slice(0,12);
-    if(spots.length < 3){ throw new Error("搜到的讲解点太少（"+spots.length+"个），请换更具体的景区名（如：杭州西湖 而不是 杭州）"); }
+    /* 小景区 2 个有效讲解点也能生成，避免因高德只收录少量 POI 而整条链路失败 */
+    if(spots.length < 2){ throw new Error("搜到的有效讲解点太少（"+spots.length+"个），请换更完整的名称（如：南京夫子庙景区）"); }
     setAutoStep("✅ 找到 "+spots.length+" 个讲解点","done");
     spots.forEach(function(s){
       setAutoStep("　📍 "+esc(s.name)+(isScenicType(s.type)?" <small>· 景区</small>":""));
@@ -1719,11 +1764,16 @@ async function buildAutoArea(){
       route: spots.map(function(s){ return toXY(s.lat,s.lng); })
     };
     var auto = loadAutoAreas();
+    /* 同名景区重新生成时覆盖旧版，避免列表越生成越多、出现重复卡片 */
+    auto = auto.filter(function(a){ return a.name !== area.name; });
     auto.unshift(area);
     saveAutoAreas(auto);
+    GUIDE_AREAS = GUIDE_AREAS.filter(function(a){ return a.name !== area.name; });
     GUIDE_AREAS.unshift(area);
     setAutoStep("💾 已存入「仿真人导游」列表，正在打开地图…","done");
-    setTimeout(function(){ openMap(area.id); toastMsg("景区地图已自动生成！"); }, 400);
+    /* 立即打开，避免按钮先恢复后用户误以为生成失败；toast 下一帧显示 */
+    openMap(area.id);
+    setTimeout(function(){ toastMsg("景区地图已自动生成！"); }, 50);
   }catch(e){
     setAutoStep("❌ "+(e&&e.message||e),"fail");
     toastMsg("生成失败："+(e&&e.message||e));
