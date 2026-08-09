@@ -1,13 +1,18 @@
 {
+  "id": "/",
   "name": "全国景点讲解",
   "short_name": "景点讲解",
-  "description": "随身中文语音导游，纯本地离线可用",
-  "start_url": "index.html",
+  "description": "随身中文语音导游，GPS智能识别景点并自动生成讲解与导游地图",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#f4f6f9",
   "theme_color": "#0f2a43",
   "lang": "zh-CN",
+  "categories": ["travel", "education", "navigation"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",

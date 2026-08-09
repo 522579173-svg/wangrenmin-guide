@@ -1,9 +1,16 @@
-/* 全国景点讲解 - 离线缓存 Service Worker
- * v3 修复：HTML 页面改为 network-first（每次拿最新版），静态资源用 stale-while-revalidate
- * 这样线上更新后，用户打开页面一定是新版，不再被旧缓存卡死。
+/* 全国景点讲解 - PWA 离线缓存
+ * v4：恢复可安装所需的 Service Worker；页面始终 network-first，避免旧缓存卡版本。
  */
-var CACHE = "spot-guide-v3";
-var FILES = ["index.html", "manifest.webmanifest"];
+var CACHE = "spot-guide-v4";
+var FILES = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./icons/icon-144.png",
+  "./icons/icon-180.png",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png"
+];
 
 self.addEventListener("install", function(e){
   e.waitUntil(

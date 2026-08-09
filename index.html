@@ -8,9 +8,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="景点讲解">
+<meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
 <title>全国景点讲解</title>
 <style>
   :root{
@@ -234,6 +236,18 @@
   .hint a{color:#1d6fb8;}
 
   .install-row{margin-top:14px;}
+  .ios-install{
+    position:fixed;inset:0;background:rgba(15,42,67,.45);z-index:120;
+    display:none;align-items:flex-end;justify-content:center;padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+  }
+  .ios-install.show{display:flex;}
+  .ios-sheet{width:100%;max-width:612px;background:var(--card);color:var(--ink);border-radius:16px;padding:17px 16px;border:1px solid var(--line);box-shadow:0 -8px 30px rgba(0,0,0,.18);}
+  .ios-sheet h3{font-size:17px;margin-bottom:10px;}
+  .ios-sheet .ios-step{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.7;margin:8px 0;}
+  .ios-step b{width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;}
+  .ios-share{font-size:20px;color:#147efb;font-weight:700;}
+  .ios-close{width:100%;margin-top:12px;padding:11px;border:0;border-radius:10px;background:var(--brand);color:#fff;font-size:14px;cursor:pointer;}
+  .ios-note{font-size:12px;color:var(--sub);margin-top:9px;}
 
   /* 自动生成景区地图 */
   .auto-step{background:var(--card);border-radius:12px;padding:11px 14px;margin-bottom:8px;border:1px solid var(--line);font-size:13px;line-height:1.7;}
@@ -439,6 +453,17 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <!-- 苹果 Safari 没有自动安装弹窗，需要手动“分享→添加到主屏幕” -->
+  <div class="ios-install" id="iosInstall" role="dialog" aria-modal="true" aria-labelledby="iosInstallTitle">
+    <div class="ios-sheet">
+      <h3 id="iosInstallTitle">🍎 安装到 iPhone 桌面</h3>
+      <div class="ios-step"><b>1</b><div>请确认当前使用的是 <strong>Safari 浏览器</strong>。如果在微信中，请点右上角“…”→“在Safari中打开”。</div></div>
+      <div class="ios-step"><b>2</b><div>点 Safari 底部的 <span class="ios-share">⇧</span> <strong>分享按钮</strong>（方框向上箭头）。</div></div>
+      <div class="ios-step"><b>3</b><div>在菜单中向上滑，点 <strong>“添加到主屏幕”</strong>，然后点右上角“添加”。</div></div>
+      <div class="ios-note">安装后请从桌面“景点讲解”图标打开，定位和全屏体验更稳定。</div>
+      <button class="ios-close" id="iosInstallClose">我知道了</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2222,43 +2247,67 @@ function startGPS(){
 }
 function stopGPS(){ if(gGPSWatch){ navigator.geolocation.clearWatch(gGPSWatch); gGPSWatch=null; } }
 
-/* ---------- PWA 安装到桌面 ---------- */
+/* ---------- PWA 安装到桌面（Android自动提示 + iPhone Safari手动引导） ---------- */
 var deferredPrompt = null;
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent||""); }
+function isStandalone(){
+  return !!(window.navigator.standalone || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches));
+}
+function showIOSInstall(){
+  if(isStandalone()){ toastMsg("景点讲解已经安装在桌面了"); return; }
+  $("iosInstall").classList.add("show");
+}
+function updateInstallEntry(){
+  if(isStandalone()){
+    $("installRow").style.display = "none";
+    return;
+  }
+  /* iOS 不触发 beforeinstallprompt，必须主动显示安装入口 */
+  if(isIOS()){
+    $("installRow").style.display = "block";
+    $("installBtn").textContent = "🍎 安装到 iPhone 桌面";
+  }
+}
 window.addEventListener("beforeinstallprompt", function(e){
   e.preventDefault();
   deferredPrompt = e;
-  $("installRow").style.display = "block";
+  if(!isStandalone()) $("installRow").style.display = "block";
+});
+window.addEventListener("appinstalled", function(){
+  deferredPrompt = null;
+  $("installRow").style.display = "none";
+  toastMsg("安装成功，请从桌面打开景点讲解");
 });
 $("installBtn").onclick = function(){
-  if(deferredPrompt){
+  if(isIOS()){
+    showIOSInstall();
+  } else if(deferredPrompt){
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(function(){
       deferredPrompt = null;
-      $("installRow").style.display = "none";
+      updateInstallEntry();
     });
   } else {
-    toastMsg("请用浏览器菜单“添加到主屏幕”（iOS Safari：分享→添加到主屏幕）");
+    toastMsg("请用浏览器菜单选择“安装应用”或“添加到主屏幕”");
   }
 };
+$("iosInstallClose").onclick = function(){ $("iosInstall").classList.remove("show"); };
+$("iosInstall").onclick = function(e){ if(e.target === $("iosInstall")) $("iosInstall").classList.remove("show"); };
 
 /* ---------- 启动 ---------- */
 applyTheme(); // 深浅色：先应用再渲染，避免白屏闪一下
 mergeAutoAreas();
 renderCities(APP_DATA);
 renderLib();
+updateInstallEntry();
 
-/* ---------- Service Worker 清理：不再注册，避免旧缓存导致页面永远不更新 ---------- */
+/* ---------- Service Worker：恢复注册，满足PWA安装并提供基础离线能力 ---------- */
 (function(){
   try{
-    if("serviceWorker" in navigator){
-      navigator.serviceWorker.getRegistrations().then(function(regs){
-        regs.forEach(function(reg){ reg.unregister(); });
-      }).catch(function(){});
-    }
-    if("caches" in window){
-      caches.keys().then(function(keys){
-        keys.forEach(function(k){ caches.delete(k); });
-      }).catch(function(){});
+    if("serviceWorker" in navigator && location.protocol === "https:"){
+      window.addEventListener("load", function(){
+        navigator.serviceWorker.register("sw.js", {scope:"./"}).catch(function(){});
+      });
     }
   }catch(e){}
 })();
