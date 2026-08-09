@@ -21,6 +21,16 @@
     --brand:#0f2a43;
     --accent:#c9a227;
     --line:#e6eaf0;
+    --btn-bg:#eef2f6;      /* 次要按钮底色（深浅色模式共用） */
+    --btn-ink:var(--ink);  /* 次要按钮文字 */
+    --field-bg:#fbfcfe;    /* 输入框底色 */
+    --hint-bg:#f7f9fc;     /* 提示框底色 */
+  }
+  /* 深色模式：自动跟随系统（设置页可手动切换），全部颜色变量由这里统一定义 */
+  html[data-theme="dark"]{
+    --bg:#111820; --card:#1a2430; --ink:#e8eef5; --sub:#9aa8b8;
+    --brand:#1d4a6e; --accent:#d4a92e; --line:#2a3644;
+    --btn-bg:#2a3644; --btn-ink:#e8eef5; --field-bg:#1e2936; --hint-bg:#1e2936;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
@@ -71,6 +81,9 @@
     display:flex;justify-content:space-between;align-items:center;gap:10px;
   }
   .spot-card:active{background:#f8fafc;}
+  html[data-theme="dark"] .spot-card:active{background:#22303e;}
+  .area-card:active{background:#f8fafc;}
+  html[data-theme="dark"] .area-card:active{background:#22303e;}
   .spot-card .t{font-size:16px;font-weight:600;}
   .spot-card .d{font-size:12px;color:var(--sub);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .spot-card .arr{color:#b8c2cc;font-size:20px;flex-shrink:0;}
@@ -84,13 +97,13 @@
   .panel{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--line);}
   .panel h3{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
 
-  .intro{font-size:14px;color:#3a4654;}
-  .script{font-size:14.5px;color:#333;line-height:2;text-align:justify;}
+  .intro{font-size:14px;color:var(--ink);opacity:.92;}
+  .script{font-size:14.5px;color:var(--ink);line-height:2;text-align:justify;}
 
   /* 播放器 */
   .player{
     position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-    width:100%;max-width:640px;background:#fff;border-top:1px solid var(--line);
+    width:100%;max-width:640px;background:var(--card);border-top:1px solid var(--line);
     padding:10px 14px calc(10px + env(safe-area-inset-bottom));
     z-index:20;box-shadow:0 -4px 16px rgba(15,42,67,.10);
     display:none;
@@ -109,13 +122,17 @@
   .player .info .s{font-size:11px;color:var(--sub);}
   .player .ctrl{display:flex;align-items:center;gap:8px;margin-top:8px;}
   .player .rate{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--sub);}
-  .rate-btn{background:#eef2f6;border:none;border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--ink);}
+  .rate-btn{background:var(--btn-bg);border:none;border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--ink);}
   .rate-btn.on{background:var(--brand);color:#fff;}
+  .player .step-btns{display:flex;align-items:center;gap:4px;margin-left:auto;}
+  .step-btn{background:var(--btn-bg);border:none;border-radius:8px;padding:3px 9px;font-size:12px;cursor:pointer;color:var(--ink);}
+  .step-btn:active{background:#dde4ec;}
+  .player .pl-prog{font-size:11px;color:var(--sub);white-space:nowrap;}
   .btn-stop{margin-left:auto;background:none;border:none;color:var(--sub);font-size:12px;cursor:pointer;padding:4px;}
 
   /* 搜索 */
   .search{
-    display:flex;background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:4px;
+    display:flex;background:var(--card);border-radius:12px;padding:9px 12px;margin-bottom:4px;
     border:1px solid var(--line);align-items:center;gap:8px;
   }
   .search input{border:none;outline:none;flex:1;font-size:14px;background:transparent;color:var(--ink);}
@@ -154,7 +171,7 @@
   .map-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 10px;}
   .map-title{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .map-modes{display:flex;gap:5px;flex-shrink:0;}
-  .mode-btn{background:#eef2f6;border:none;border-radius:10px;padding:5px 9px;font-size:12px;cursor:pointer;color:var(--ink);}
+  .mode-btn{background:var(--btn-bg);border:none;border-radius:10px;padding:5px 9px;font-size:12px;cursor:pointer;color:var(--ink);}
   .mode-btn.on{background:var(--brand);color:#fff;}
 
   .map-wrap{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 2px 10px rgba(15,42,67,.08);}
@@ -166,12 +183,12 @@
   .gb-name{font-size:15px;font-weight:700;color:#f5d574;margin-top:2px;}
   .gb-text{font-size:12px;line-height:1.7;margin-top:4px;max-height:72px;overflow:auto;color:#f2f4f7;}
 
-  .map-status{display:flex;flex-direction:column;gap:7px;margin-top:10px;background:#fff;border-radius:12px;padding:11px 13px;border:1px solid var(--line);}
+  .map-status{display:flex;flex-direction:column;gap:7px;margin-top:10px;background:var(--card);border-radius:12px;padding:11px 13px;border:1px solid var(--line);}
   .st-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;}
   .st-row b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
   .map-controls{display:flex;gap:10px;margin-top:10px;}
-  .gc-btn{flex:1;padding:11px 0;border-radius:12px;border:none;font-size:14px;cursor:pointer;background:#eef2f6;color:var(--ink);}
+  .gc-btn{flex:1;padding:11px 0;border-radius:12px;border:none;font-size:14px;cursor:pointer;background:var(--btn-bg);color:var(--ink);}
   .gc-btn.main{background:linear-gradient(135deg,#0f2a43,#1d4a6e);color:#fff;}
   .gc-btn.main.playing{background:linear-gradient(135deg,#c9a227,#a87f14);}
   .gc-btn.main[disabled]{opacity:.5;}
@@ -186,25 +203,31 @@
   .fr-card{background:var(--card);border-radius:14px;padding:14px 16px;margin-top:12px;border:1px solid var(--line);}
   .fr-head{font-size:11px;color:var(--sub);letter-spacing:1px;}
   .fr-name{font-size:17px;font-weight:700;margin-top:3px;}
-  .fr-badge{display:inline-block;margin-top:6px;font-size:11px;background:#eef2f6;border-radius:20px;padding:2px 10px;color:var(--brand);}
+  .fr-badge{display:inline-block;margin-top:6px;font-size:11px;background:var(--btn-bg);border-radius:20px;padding:2px 10px;color:var(--brand);}
   .fr-badge.ai{background:#fff3e0;color:#a05a12;}
+  html[data-theme="dark"] .fr-badge.ai{background:#3a2c14;color:#e8b45a;}
   .fr-badge.lib{background:#e8f5e9;color:#2e7d32;}
-  .fr-desc{font-size:13px;color:#3a4654;margin-top:8px;line-height:1.8;max-height:150px;overflow:auto;}
+  html[data-theme="dark"] .fr-badge.lib{background:#1c3320;color:#7fd18a;}
+  .fr-badge.lib{background:#e8f5e9;color:#2e7d32;}
+  .fr-desc{font-size:13px;color:var(--ink);opacity:.9;margin-top:8px;line-height:1.8;max-height:150px;overflow:auto;}
   .fr-addr{font-size:12px;color:var(--sub);margin-top:6px;}
 
   .lib-item{background:var(--card);border-radius:12px;padding:11px 13px;margin-bottom:8px;border:1px solid var(--line);display:flex;align-items:center;gap:10px;}
   .lib-item .li-b{flex:1;min-width:0;}
   .lib-item .li-n{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .lib-item .li-m{font-size:11px;color:var(--sub);margin-top:2px;}
-  .lib-item .li-btn{background:#eef2f6;border:none;border-radius:9px;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;}
+  .lib-item .li-btn{background:var(--btn-bg);border:none;border-radius:9px;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;}
   .lib-item .li-btn.main{background:var(--brand);color:#fff;}
 
   /* 设置页 */
   .set-field{margin-bottom:14px;}
   .set-field label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600;}
-  .set-field input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;outline:none;background:#fbfcfe;color:var(--ink);}
+  .set-field input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;outline:none;background:var(--field-bg);color:var(--ink);}
   .set-field input:focus{border-color:var(--brand);}
-  .hint{font-size:11.5px;color:var(--sub);line-height:1.7;margin-top:10px;background:#f7f9fc;border-radius:10px;padding:10px 12px;}
+  .theme-row{display:flex;gap:8px;}
+  .theme-btn{flex:1;background:var(--btn-bg);border:1px solid var(--line);border-radius:10px;padding:9px 0;font-size:13px;cursor:pointer;color:var(--ink);}
+  .theme-btn.on{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .hint{font-size:11.5px;color:var(--sub);line-height:1.7;margin-top:10px;background:var(--hint-bg);border-radius:10px;padding:10px 12px;}
   .hint a{color:#1d6fb8;}
 
   .install-row{margin-top:14px;}
@@ -334,6 +357,10 @@
       <input id="freeSimKw" type="text" placeholder="输入地名，如：西安大雁塔 / 杭州灵隐寺">
       <button class="go" id="freeSimBtn">生成</button>
     </div>
+    <div class="hint" style="margin-top:4px;">
+      💡 <b>iOS/微信提示</b>：真 GPS 需要 HTTPS + 定位授权（浏览器弹窗点「允许」）。
+      在设置页右上角可打开「模拟演示位置」，模拟进入某景区，无需真定位即可体验走到哪讲到哪。
+    </div>
     <div id="freeResult"></div>
     <div class="section-title">📚 我的讲解库 <small id="libCount"></small></div>
     <div id="freeLib"></div>
@@ -341,6 +368,17 @@
 
   <!-- 设置 -->
   <div class="page" id="page-settings">
+    <div class="section-title">🌓 外观</div>
+    <div class="panel">
+      <div class="set-field">
+        <label>主题模式（默认跟随系统）</label>
+        <div class="theme-row">
+          <button class="theme-btn" data-theme-opt="auto">🌗 自动</button>
+          <button class="theme-btn" data-theme-opt="light">☀️ 浅色</button>
+          <button class="theme-btn" data-theme-opt="dark">🌙 深色</button>
+        </div>
+      </div>
+    </div>
     <div class="section-title">🔑 API 设置 <small>仅保存在本机浏览器</small></div>
     <div class="panel">
       <div class="set-field">
@@ -388,6 +426,11 @@
       <button class="rate-btn" data-rate="0.8">0.8x</button>
       <button class="rate-btn on" data-rate="1">1.0x</button>
       <button class="rate-btn" data-rate="1.2">1.2x</button>
+      <span class="step-btns">
+        <button class="step-btn" id="btnPrev" title="上一句">⏮</button>
+        <button class="step-btn" id="btnNext" title="下一句">⏭</button>
+      </span>
+      <span class="pl-prog" id="plProg"></span>
     </div>
   </div>
 
@@ -561,7 +604,10 @@ APP_DATA.forEach(function(c){
 function go(page){
   document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
   $("page-"+page).classList.add("active");
+  /* iOS 微信/部分浏览器 window.scrollTo 不可靠，用双保险（scrollTo + documentElement.scrollTop） */
   window.scrollTo(0,0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
   if(page === "home") backBtn.style.display = "none";
   else backBtn.style.display = "";
 }
@@ -633,8 +679,28 @@ var currentSpot = null;
 /* ---------- 语音播放（切片式：暂停/继续可靠，兼容 iOS Safari/微信） ---------- */
 var rate = 1;
 var playerSents = [], playerIdx = 0, playerStatus = "stopped"; // stopped / playing / paused
+/* TTS 能力探测：极简浏览器/旧内核可能没有 speechSynthesis（直接调用会抛 ReferenceError 白屏）。
+ * 探测结果：null=不可用 / "waiting"=存在但声音未加载完 / "ok"=可用 */
+function ttsState(){
+  if(!("speechSynthesis" in window)) return null;
+  try{
+    if(!window.speechSynthesis) return null;
+    if(!window.SpeechSynthesisUtterance) return null;
+    if(!window.speechSynthesis.getVoices) return null;
+  }catch(e){ return null; }
+  return "ok";
+}
+/* 尝试读取声音列表（仅在 ttsState() 确认可用后调用；部分浏览器首次调用会抛异常） */
+function getVoicesSafe(){
+  try{ return window.speechSynthesis.getVoices() || []; }
+  catch(e){ return []; }
+}
+/* 安全调用：speechSynthesis 不可用时静默跳过（不抛错，页面照常） */
+function ttsCancel(){ try{ if(ttsState() === "ok") window.speechSynthesis.cancel(); }catch(e){} }
+function ttsSpeak(u){ try{ if(ttsState() === "ok") window.speechSynthesis.speak(u); }catch(e){} }
 function pickChineseVoice(){
-  var voices = speechSynthesis.getVoices();
+  if(ttsState() !== "ok") return null;
+  var voices = getVoicesSafe();
   if(!voices.length) return null;
   var prefer = voices.filter(function(v){ return v.lang && v.lang.indexOf("zh") === 0; });
   var fav = prefer.filter(function(v){ return /xiaoxiao|tingting|meijia|huihui|yaoyao|sinji|female/i.test(v.name); });
@@ -657,6 +723,29 @@ function speakSentences(arr, fromIndex){
   btnPlay.textContent = "⏸";
   btnPlay.classList.add("playing");
   plStatus.textContent = "正在讲解…";
+  updatePlProg();
+  function updatePlProg(){
+    var el = $("plProg");
+    if(!el) return;
+    if(arr && arr.length && playerStatus === "playing"){
+      el.textContent = "第 "+(i+1)+" / "+arr.length+" 句";
+    } else if(playerStatus === "paused"){
+      el.textContent = "已暂停 · 第 "+Math.min(playerIdx+2, arr.length)+" / "+arr.length+" 句";
+    } else {
+      el.textContent = "";
+    }
+  }
+  if(ttsState() !== "ok"){
+    /* 浏览器不支持语音：不静默失败，文字提示已展示讲解词（讲解词本身就在页面里） */
+    toastMsg("当前浏览器不支持语音朗读，已为您展示讲解文字");
+    playerStatus = "stopped";
+    playerSents = [];
+    playerIdx = 0;
+    btnPlay.textContent = "▶";
+    btnPlay.classList.remove("playing");
+    plStatus.textContent = "播放不可用";
+    return;
+  }
   function next(){
     if(playerStatus !== "playing") return;
     if(i >= arr.length){
@@ -669,38 +758,93 @@ function speakSentences(arr, fromIndex){
       return;
     }
     playerIdx = i;
-    var u = new SpeechSynthesisUtterance(arr[i]);
+    var u = new SpeechSynthesisUtterance(numToCn(arr[i]));
     u.lang = "zh-CN";
     u.rate = rate;
     var v = pickChineseVoice();
     if(v) u.voice = v;
-    u.onend = function(){ if(playerStatus === "playing"){ i++; next(); } };
+    u.onend = function(){ if(playerStatus === "playing"){ i++; next(); updatePlProg(); } };
     u.onerror = function(e){
       if(e && e.error === "canceled") return;
-      if(playerStatus === "playing"){ i++; next(); }
+      if(playerStatus === "playing"){ i++; next(); updatePlProg(); }
     };
-    speechSynthesis.speak(u);
+    ttsSpeak(u);
+    updatePlProg();
   }
-  speechSynthesis.cancel();
+  ttsCancel();
   next();
 }
+/* 阿拉伯数字转中文（TTS 对"300"常读成"三零零"，转成"三百"更自然） */
+function numToCn(t){
+  var s = String(t == null ? "" : t);
+  if(!/\d/.test(s)) return s;
+  var map = {"0":"零","1":"一","2":"二","3":"三","4":"四","5":"五","6":"六","7":"七","8":"八","9":"九"};
+  /* 把纯数字串（最多12位）转中文；小数点转"点"；连续数字保持原位数 */
+  return s.replace(/(\d{1,12}(?:\.\d{1,6})?)/g, function(m){
+    var dec = "";
+    var intPart = m;
+    if(m.indexOf(".") > -1){
+      var sp = m.split(".");
+      intPart = sp[0];
+      dec = "点" + sp[1].split("").map(function(d){ return map[d] || d; }).join("");
+    }
+    var n = parseInt(intPart, 10);
+    if(!isFinite(n) || n < 0 || n > 999999999999) return m;
+    var out = num2cn(n);
+    /* 前导零保留（如 "08" 读 "零八"，日期/编号更准确） */
+    if(intPart.length > 1 && intPart.charAt(0) === "0") out = "零" + out;
+    return out + dec;
+  });
+}
+function num2cn(n){
+  var digits = "零一二三四五六七八九", units = ["", "十", "百", "千"], big = ["", "万", "亿"];
+  if(n === 0) return "零";
+  var str = String(n), parts = [], i = 0, chunk;
+  while(str.length > 4){ chunk = str.slice(-4); parts.unshift(chunk); str = str.slice(0, -4); }
+  if(str.length) parts.unshift(str);
+  var out = [];
+  for(var p = 0; p < parts.length; p++){
+    var s = parts[p], seg = "", zero = false, needZero = false;
+    for(var k = 0; k < s.length; k++){
+      var d = parseInt(s.charAt(k), 10);
+      var u = s.length - 1 - k;
+      if(d === 0){ zero = true; }
+      else {
+        if(zero || needZero) seg += "零";
+        zero = false; needZero = false;
+        seg += digits.charAt(d) + units[u];
+      }
+      if(u === 0) needZero = (d === 0);
+    }
+    if(p < parts.length - 1 && seg === "") seg = "零";
+    out.push(seg + big[parts.length - 1 - p]);
+  }
+  var res = out.join("");
+  res = res.replace(/零+/g, "零").replace(/零$/, "");
+  if(res.indexOf("一十") === 0) res = res.slice(1);
+  /* 口语优化：万/亿段开头的“二”读“两”更自然（两万/两千万/两亿），其余保持“二” */
+  res = res.replace(/^二(?=万|亿|千|百)/, "两").replace(/(?<=万)二(?=千|百|万|亿)/, "两").replace(/(?<=亿)二(?=千|百|万|亿)/, "两");
+  return res;
+}
 function stopSpeak(){
-  speechSynthesis.cancel();
+  ttsCancel();
   playerStatus = "stopped";
   playerSents = [];
   playerIdx = 0;
   btnPlay.textContent = "▶";
   btnPlay.classList.remove("playing");
   plStatus.textContent = "已停止";
+  var el = $("plProg"); if(el) el.textContent = "";
 }
 btnPlay.onclick = function(){
   if(!currentSpot) return;
   if(playerStatus === "playing"){
-    speechSynthesis.cancel();
+    ttsCancel();
     playerStatus = "paused";
     btnPlay.textContent = "▶";
     btnPlay.classList.remove("playing");
     plStatus.textContent = "已暂停";
+    updatePlProg();
     return;
   }
   if(playerStatus === "paused"){
@@ -711,6 +855,20 @@ btnPlay.onclick = function(){
   playerSents = splitScript(currentSpot.script);
   speakSentences(playerSents, 0);
 };
+$("btnPrev").onclick = function(){
+  if(playerStatus === "playing" || playerStatus === "paused"){
+    var arr = playerSents.length ? playerSents : splitScript(currentSpot.script);
+    ttsCancel();
+    speakSentences(arr, Math.max(0, playerIdx - 1));
+  }
+};
+$("btnNext").onclick = function(){
+  if(playerStatus === "playing" || playerStatus === "paused"){
+    var arr = playerSents.length ? playerSents : splitScript(currentSpot.script);
+    ttsCancel();
+    speakSentences(arr, Math.min(playerIdx + 1, arr.length - 1));
+  }
+};
 btnStop.onclick = function(){ stopSpeak(); player.classList.remove("show"); };
 document.querySelectorAll(".rate-btn").forEach(function(b){
   b.onclick = function(){
@@ -720,14 +878,14 @@ document.querySelectorAll(".rate-btn").forEach(function(b){
     toastMsg("语速已设为 "+rate+"x");
     var arr = playerSents.length ? playerSents : splitScript(currentSpot.script);
     if(playerStatus === "playing" || playerStatus === "paused"){
-      speechSynthesis.cancel();
+      ttsCancel();
       speakSentences(arr, playerIdx);
     }
   };
 });
 /* 兼容部分浏览器 voices 异步加载 */
-if("speechSynthesis" in window){
-  speechSynthesis.onvoiceschanged = function(){ pickChineseVoice(); };
+if("speechSynthesis" in window && ttsState() !== null){
+  window.speechSynthesis.onvoiceschanged = function(){ pickChineseVoice(); };
   setTimeout(function(){ pickChineseVoice(); }, 300);
 }
 
@@ -766,6 +924,33 @@ function toastMsg(t){
  * ============================================================ */
 var SETTINGS_KEY = "spotguide_settings";
 var LIB_KEY = "spotguide_lib";
+var THEME_KEY = "spotguide_theme"; // auto / light / dark
+/* ---------- 主题（深浅色） ---------- */
+function applyTheme(){
+  var t = localStorage.getItem(THEME_KEY) || "auto";
+  var dark = (t === "dark") || (t === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  return t;
+}
+function renderThemeBtns(){
+  var t = applyTheme();
+  document.querySelectorAll(".theme-btn").forEach(function(b){
+    b.classList.toggle("on", b.getAttribute("data-theme-opt") === t);
+  });
+}
+document.querySelectorAll(".theme-btn").forEach(function(b){
+  b.onclick = function(){
+    localStorage.setItem(THEME_KEY, b.getAttribute("data-theme-opt"));
+    renderThemeBtns();
+    toastMsg("外观已切换");
+  };
+});
+/* 系统深浅色变化时自动跟随 */
+if(window.matchMedia){
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(){
+    if(localStorage.getItem(THEME_KEY) === "auto") renderThemeBtns();
+  });
+}
 var DEFAULT_SETTINGS = {
   deepseekKey:"", amapKey:"",
   proxyUrl:"https://guide-d4grybdwde2f9d281-1432633719.ap-shanghai.app.tcloudbase.com/deepseek",
@@ -787,9 +972,19 @@ function openSettings(){
   $("setAmap").value = s.amapKey;
   $("setProxy").value = s.proxyUrl;
   $("setAmapProxy").value = s.amapProxy;
+  renderThemeBtns();
 }
 $("saveSettings").onclick = function(){
   var s = { deepseekKey:$("setDsk").value.trim(), amapKey:$("setAmap").value.trim(), proxyUrl:$("setProxy").value.trim(), amapProxy:$("setAmapProxy").value.trim() };
+  /* 代理地址必须是 https（页面是 https，http 代理会被浏览器混合内容拦截，白报错） */
+  if(s.proxyUrl && !/^https:\/\//i.test(s.proxyUrl)){
+    toastMsg("DeepSeek 代理地址必须以 https:// 开头（当前页面是 https，http 会被浏览器拦截）");
+    $("setProxy").focus(); return;
+  }
+  if(s.amapProxy && !/^https:\/\//i.test(s.amapProxy)){
+    toastMsg("高德代理地址必须以 https:// 开头（当前页面是 https，http 会被浏览器拦截）");
+    $("setAmapProxy").focus(); return;
+  }
   saveSettings(s);
   toastMsg("设置已保存（仅存本机浏览器）");
 };
@@ -849,23 +1044,76 @@ function renderLib(){
 /* ============================================================
  *  逆地理编码（坐标 → 地名）
  *  优先高德（需key，JSONP免跨域），否则 OpenStreetMap 兜底
+ *  限流保护：高德免费档 3万次/天、5000次/日高峰；失败退避 + 结果缓存
  * ============================================================ */
+/* 代理接口并发限流：同时最多 2 个在途请求，其余排队（防免费档/并发触发超频） */
+var amapProxyQueue = [], amapProxyInflight = 0;
+function amapFetchLimited(url, timeoutMs){
+  return new Promise(function(resolve){
+    var finished = false;
+    function run(){
+      amapProxyInflight++;
+      var settled = false;
+      function done(v){
+        if(settled) return; settled = true;
+        amapProxyInflight--;
+        finished = true;
+        resolve(v);
+        next();
+      }
+      fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(done)
+        .catch(function(){ done(null); });
+      setTimeout(function(){ done(null); }, timeoutMs || 12000);
+    }
+    function next(){
+      if(amapProxyQueue.length && amapProxyInflight < 2){
+        (amapProxyQueue.shift())();
+      }
+    }
+    if(amapProxyInflight >= 2){
+      amapProxyQueue.push(run);
+    } else {
+      run();
+    }
+  });
+}
+/* 简单内存缓存：10 分钟内同一请求直接复用（GPS 每 20 秒触发，防重复调用） */
+var geoCache = {}, GEO_CACHE_TTL = 10 * 60 * 1000;
+function geoCacheGet(key){
+  var it = geoCache[key];
+  if(!it) return null;
+  if(Date.now() - it.ts > GEO_CACHE_TTL){ delete geoCache[key]; return null; }
+  return it.val;
+}
+function geoCachePut(key, val){
+  geoCache[key] = { val: val, ts: Date.now() };
+  if(Object.keys(geoCache).length > 200){
+    var keys = Object.keys(geoCache), now = Date.now();
+    for(var i = 0; i < keys.length; i++){
+      if(now - geoCache[keys[i]].ts > GEO_CACHE_TTL) delete geoCache[keys[i]];
+    }
+  }
+}
 function reverseGeo(lat, lng){
   return new Promise(function(resolve){
     var s = loadSettings();
+    var cacheKey = (lat||0).toFixed(4) + "," + (lng||0).toFixed(4);
+    var cached = geoCacheGet(cacheKey);
+    if(cached){ resolve(cached); return; }
     if(s.amapProxy){
       // 高德安全代理（Vercel /api/geocode 或 PHP）：Key 在服务器端
       var u = s.amapProxy;
       if(/\/api\/(deepseek|geocode)$/.test(u)){ u += ".js"; }
-      fetch(u + (u.indexOf("?") > -1 ? "&" : "?") + "lat=" + lat + "&lng=" + lng)
-        .then(function(r){ return r.json(); })
+      amapFetchLimited(u + (u.indexOf("?") > -1 ? "&" : "?") + "lat=" + lat + "&lng=" + lng, 8000)
         .then(function(d){
           if(d && d.data && d.data.regeocode){
-            resolve({ source:"amap-proxy", address:d.data.regeocode.formatted_address || "", pois:(d.data.regeocode.pois||[]).slice(0,10) });
+            var val = { source:"amap-proxy", address:d.data.regeocode.formatted_address || "", pois:(d.data.regeocode.pois||[]).slice(0,10) };
+            geoCachePut(cacheKey, val);
+            resolve(val);
           } else resolve(null);
-        })
-        .catch(function(){ resolve(null); });
-      setTimeout(function(){ resolve(null); }, 8000);
+        });
       return;
     }
     if(s.amapKey){
@@ -1020,8 +1268,9 @@ function startFreeGPS(){
     }
     $("fsState").textContent = "📍 跟随中（移动≥80米自动识别地点）";
   }, function(err){
-    $("fsState").textContent = "定位失败："+(err.code===1?"未授权":err.code===2?"无法获取位置":"超时");
-    toastMsg("定位失败，请检查手机定位权限");
+    var msg = err.code===1?"未授权（请在手机设置里允许定位）":err.code===2?"无法获取位置（请到室外/开GPS）":"定位超时（网络慢或未开GPS）";
+    $("fsState").textContent = "定位失败："+msg;
+    toastMsg("定位失败：请检查手机定位权限和GPS开关");
   }, { enableHighAccuracy:true, maximumAge:3000, timeout:10000 });
 }
 function stopFreeGPS(){ if(freeWatch){ navigator.geolocation.clearWatch(freeWatch); freeWatch=null; } }
@@ -1157,11 +1406,15 @@ async function doGenerate(item, lat, lng, isRegen){
 
 /* 自由导览独立朗读（不影响景区地图状态） */
 function speakFree(text){
-  speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(text);
+  if(ttsState() !== "ok"){
+    toastMsg("当前浏览器不支持语音朗读，讲解词已展示在下方");
+    return;
+  }
+  ttsCancel();
+  var u = new SpeechSynthesisUtterance(numToCn(text));
   u.lang = "zh-CN"; u.rate = 1;
   var v = pickChineseVoice(); if(v) u.voice = v;
-  speechSynthesis.speak(u);
+  ttsSpeak(u);
 }
 
 /* 模拟演示：输入地名走完整流程（无GPS也能用） */
@@ -1634,11 +1887,21 @@ function updateStatus(){
   var done=0; for(var k in gDone) done++;
   stDone.textContent="已听 "+done+"/"+currentArea.spots.length;
 }
+/* 讲解重触发冷却：同一讲解点 3 分钟内不重复讲（GPS 抖动/徘徊在点内时防止反复开讲） */
+var gSpotCooldown = {}, SPOT_COOLDOWN_MS = 3 * 60 * 1000;
 function checkTrigger(){
   if(!currentArea || gCurSpot) return;
+  var now = Date.now();
   currentArea.spots.forEach(function(s){
-    var d=Math.hypot(s.x-gPos.x,s.y-gPos.y);
-    if(d<=s.r){ triggerSpot(s); }
+    var d = Math.hypot(s.x-gPos.x,s.y-gPos.y);
+    if(d<=s.r){
+      /* 冷却期内不再触发（gDone 已听过的不再讲，未听过的 3 分钟内也只讲一次） */
+      var last = gSpotCooldown[s.id] || 0;
+      if(now - last > SPOT_COOLDOWN_MS){
+        gSpotCooldown[s.id] = now;
+        triggerSpot(s);
+      }
+    }
   });
 }
 function triggerSpot(s){
@@ -1651,8 +1914,7 @@ function triggerSpot(s){
   stState.textContent="🎧 正在讲解「"+s.name+"」";
   speakGuide(s.script);
   if(gMode==="demo"){ gPaused=true; gStart.textContent="⏸ 聆听中…"; }
-}
-function endSpot(){
+}function endSpot(){
   gCurSpot=null;
   hideBubble();
   if(gMode==="demo"){ gPaused=false; gStart.textContent="⏸ 暂停"; }
@@ -1664,16 +1926,23 @@ function hideBubble(){ guideBubble.style.display="none"; }
 /* ---------- 导游语音（复用浏览器TTS） ---------- */
 var guideUtter=null;
 function speakGuide(text){
-  speechSynthesis.cancel();
-  guideUtter=new SpeechSynthesisUtterance(text);
+  if(ttsState() !== "ok"){
+    gbText.textContent = text;
+    guideBubble.style.display = "block";
+    toastMsg("当前浏览器不支持语音朗读，已展示讲解文字");
+    setTimeout(function(){ endSpot(); }, 9000);
+    return;
+  }
+  ttsCancel();
+  guideUtter=new SpeechSynthesisUtterance(numToCn(text));
   guideUtter.lang="zh-CN";
   guideUtter.rate=1;
   var v=pickChineseVoice(); if(v) guideUtter.voice=v;
   guideUtter.onend=function(){ setTimeout(endSpot,500); };
   guideUtter.onerror=function(){ setTimeout(endSpot,300); };
-  speechSynthesis.speak(guideUtter);
+  ttsSpeak(guideUtter);
 }
-function stopGuideSpeak(){ speechSynthesis.cancel(); if(gCurSpot) endSpot(); }
+function stopGuideSpeak(){ ttsCancel(); if(gCurSpot) endSpot(); }
 
 /* ---------- 演示模式定时器 ---------- */
 function startGuideTimer(){ stopGuideTimer(); gLastTick=0; gTimer=setInterval(gTick,40); }
@@ -1721,7 +1990,7 @@ gStart.onclick=function(){
 gReset.onclick=function(){
   stopGuideSpeak(); stopGuideTimer(); stopGPS();
   gRouteIdx=0; gPos={x:gRoute[0][0],y:gRoute[0][1]};
-  gDone={}; gCurSpot=null; gPlaying=false; gPaused=false;
+  gDone={}; gSpotCooldown={}; gCurSpot=null; gPlaying=false; gPaused=false;
   gStart.textContent="▶ 开始游览"; gStart.classList.remove("playing");
   hideBubble();
   drawMap(); updateStatus();
@@ -1780,6 +2049,7 @@ $("installBtn").onclick = function(){
 };
 
 /* ---------- 启动 ---------- */
+applyTheme(); // 深浅色：先应用再渲染，避免白屏闪一下
 mergeAutoAreas();
 renderCities(APP_DATA);
 renderLib();
