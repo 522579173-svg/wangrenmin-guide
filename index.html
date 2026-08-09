@@ -211,6 +211,9 @@
   .fr-badge.lib{background:#e8f5e9;color:#2e7d32;}
   .fr-desc{font-size:13px;color:var(--ink);opacity:.9;margin-top:8px;line-height:1.8;max-height:150px;overflow:auto;}
   .fr-addr{font-size:12px;color:var(--sub);margin-top:6px;}
+  .free-detail-head{margin-top:12px;}
+  .free-detail-actions{margin-bottom:12px;}
+  #page-free{padding-bottom:140px;}
 
   .lib-item{background:var(--card);border-radius:12px;padding:11px 13px;margin-bottom:8px;border:1px solid var(--line);display:flex;align-items:center;gap:10px;}
   .lib-item .li-b{flex:1;min-width:0;}
@@ -1325,56 +1328,60 @@ function ensureFreeGuide(item, lat, lng){
   renderFreeResult({ type:"new", item:item, lat:lat, lng:lng });
 }
 
+/* 自由导览识别结果：与「5城15景」详情统一为 景点简介/讲解词/小贴士 三卡片样式 */
 function renderFreeResult(r){
   var box = $("freeResult");
   box.innerHTML = "";
-  var card = document.createElement("div");
-  card.className = "fr-card";
-  var badge = "", desc = "", buttons = "";
-  if(r.type === "builtin"){
-    badge = '<span class="fr-badge">📚 内置精品讲解</span>';
-    desc = '<div class="fr-desc">'+esc(r.spot.intro)+'</div>';
-    buttons =
-      '<div class="map-controls">'+
-        '<button class="gc-btn main" id="frPlay">🎧 播放讲解</button>'+
-        '<button class="gc-btn" id="frDetail">📄 看详情</button>'+
-      '</div>';
-  } else if(r.type === "lib"){
-    badge = '<span class="fr-badge lib">✅ 我的讲解库 · 已缓存</span>';
-    desc = '<div class="fr-desc">'+esc(r.lib.script)+'</div>';
-    buttons =
-      '<div class="map-controls">'+
-        '<button class="gc-btn main" id="frPlay">🎧 播放讲解</button>'+
-        '<button class="gc-btn" id="frRe">🔄 重新生成</button>'+
-      '</div>';
-  } else {
-    badge = '<span class="fr-badge ai">✨ 陌生地点 · AI 自动补全</span>';
-    desc = '<div class="fr-desc">此地还没有讲解。点击下方按钮，AI 会当场生成一篇真人导游式讲解并朗读，同时自动存入“我的讲解库”，下次到访直接开讲。</div>';
-    buttons =
-      '<div class="map-controls">'+
-        '<button class="gc-btn main" id="frGen">🤖 AI 生成并讲解</button>'+
-      '</div>';
-  }
-  card.innerHTML =
-    '<div class="fr-head">📍 识别结果</div>'+
-    '<div class="fr-name">'+esc(r.item.name)+'</div>'+
-    badge+
-    (r.item.address?'<div class="fr-addr">📮 '+esc(r.item.address)+'</div>':'')+
-    desc+buttons;
-  box.appendChild(card);
 
-  var onPlay = function(){
-    if(r.type === "builtin"){ speakFree(r.spot.script); toastMsg("正在讲解「"+r.spot.name+"」"); }
-    else if(r.type === "lib"){ speakFree(r.lib.script); toastMsg("正在讲解「"+r.lib.name+"」"); }
+  /* 尚未生成时保留引导卡；生成后立即切换为统一详情样式 */
+  if(r.type === "new"){
+    var pending = document.createElement("div");
+    pending.className = "fr-card";
+    pending.innerHTML =
+      '<div class="fr-head">📍 识别结果</div>'+
+      '<div class="fr-name">'+esc(r.item.name)+'</div>'+
+      '<span class="fr-badge ai">✨ 陌生地点 · AI 自动补全</span>'+
+      (r.item.address?'<div class="fr-addr">📮 '+esc(r.item.address)+'</div>':'')+
+      '<div class="fr-desc">此地还没有讲解。点击下方按钮，AI 会生成真人导游式讲解，随后用与内置景点相同的详情样式展示并存入“我的讲解库”。</div>'+
+      '<div class="map-controls"><button class="gc-btn main" id="frGen">🤖 AI 生成并讲解</button></div>';
+    box.appendChild(pending);
+    $("frGen").onclick = function(){ doGenerate(r.item, r.lat, r.lng, false); };
+    return;
+  }
+
+  var isBuiltin = r.type === "builtin";
+  var data = isBuiltin ? r.spot : r.lib;
+  var name = data.name || r.item.name;
+  var address = data.location || data.address || r.item.address || "当前位置";
+  var intro = isBuiltin
+    ? (data.intro || data.summary || "暂无景点简介")
+    : ((data.summary && data.summary.replace(/…$/, "")) || ("这是在“我的讲解库”中保存的 AI 讲解，地点位于"+address+"。"));
+  var script = data.script || "暂无讲解词";
+  var tip = isBuiltin
+    ? (data.tip || "请根据现场开放时间和客流情况合理安排行程。")
+    : "AI 讲解可能存在个别史实偏差，重要信息请以景区官方公告为准；如内容不满意，可重新生成。";
+  var tag = isBuiltin ? (data.tag || "内置精品讲解") : "我的讲解库 · 已缓存";
+
+  box.innerHTML =
+    '<div class="detail-head free-detail-head">'+
+      '<div class="name">'+esc(name)+'</div>'+
+      '<div class="loc">📍 '+esc(address)+'</div>'+
+      '<span class="tag">'+esc(tag)+'</span>'+
+    '</div>'+
+    '<div class="panel"><h3>📌 景点简介</h3><div class="intro">'+esc(intro)+'</div></div>'+
+    '<div class="panel"><h3>🎧 讲解词</h3><div class="script">'+esc(script)+'</div></div>'+
+    '<div class="panel"><h3>💡 小贴士</h3><div class="intro">'+esc(tip)+'</div></div>'+
+    '<div class="map-controls free-detail-actions">'+
+      '<button class="gc-btn main" id="frPlay">🎧 播放讲解</button>'+
+      (isBuiltin ? '' : '<button class="gc-btn" id="frRe">🔄 重新生成</button>')+
+    '</div>';
+
+  /* 复用5城15景的底部播放器：语速、暂停、上下句、进度全部一致 */
+  $("frPlay").onclick = function(){
+    playFreeInMainPlayer({ name:name, script:script, location:address, intro:intro, tip:tip });
   };
-  var playBtn = $("frPlay");
-  if(playBtn) playBtn.onclick = onPlay;
-  var detailBtn = $("frDetail");
-  if(detailBtn) detailBtn.onclick = function(){ openDetail(r.spot); };
   var reBtn = $("frRe");
   if(reBtn) reBtn.onclick = function(){ doGenerate(r.item, r.lat, r.lng, true); };
-  var genBtn = $("frGen");
-  if(genBtn) genBtn.onclick = function(){ doGenerate(r.item, r.lat, r.lng, false); };
 }
 
 /* AI 生成并存入讲解库 */
@@ -1404,17 +1411,26 @@ async function doGenerate(item, lat, lng, isRegen){
   }
 }
 
-/* 自由导览独立朗读（不影响景区地图状态） */
+/* 自由导览复用主播放器（视觉和5城15景完全一致） */
+function playFreeInMainPlayer(data){
+  currentSpot = {
+    name: data.name || "景点讲解",
+    script: data.script || "",
+    location: data.location || "",
+    intro: data.intro || "",
+    tip: data.tip || ""
+  };
+  plTitle.textContent = currentSpot.name+" · 讲解";
+  stopSpeak();
+  player.classList.add("show");
+  playerSents = splitScript(currentSpot.script);
+  speakSentences(playerSents, 0);
+  toastMsg("正在讲解「"+currentSpot.name+"」");
+}
+
+/* 自由导览朗读：保留旧入口，统一转到主播放器 */
 function speakFree(text){
-  if(ttsState() !== "ok"){
-    toastMsg("当前浏览器不支持语音朗读，讲解词已展示在下方");
-    return;
-  }
-  ttsCancel();
-  var u = new SpeechSynthesisUtterance(numToCn(text));
-  u.lang = "zh-CN"; u.rate = 1;
-  var v = pickChineseVoice(); if(v) u.voice = v;
-  ttsSpeak(u);
+  playFreeInMainPlayer({ name:$("fsPlace").textContent || "景点讲解", script:text });
 }
 
 /* 模拟演示：输入地名走完整流程（无GPS也能用） */
