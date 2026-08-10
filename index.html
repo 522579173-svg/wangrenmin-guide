@@ -45,14 +45,14 @@
   /* 顶部 */
   header{
     background:linear-gradient(135deg,#0f2a43,#1d4a6e);
-    color:#fff;padding:18px 16px 16px;position:sticky;top:0;z-index:10;position:relative;
+    color:#fff;padding:calc(18px + env(safe-area-inset-top)) 16px 16px;position:sticky;top:0;z-index:10;
   }
   header h1{font-size:20px;font-weight:700;letter-spacing:1px;padding-right:52px;}
   header h1 span{color:var(--accent);}
   header p{font-size:12px;opacity:.8;margin-top:2px;}
   .back{background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:4px 8px 4px 0;margin-bottom:6px;}
   #settingsBtn{
-    position:absolute;right:12px;top:12px;background:rgba(255,255,255,.16);border:none;color:#fff;
+    position:absolute;right:12px;top:calc(12px + env(safe-area-inset-top));background:rgba(255,255,255,.16);border:none;color:#fff;
     font-size:18px;width:40px;height:40px;border-radius:12px;cursor:pointer;line-height:1;
   }
   #settingsBtn:active{background:rgba(255,255,255,.28);}
@@ -633,10 +633,12 @@ APP_DATA.forEach(function(c){
 function go(page){
   document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
   $("page-"+page).classList.add("active");
-  /* iOS 微信/部分浏览器 window.scrollTo 不可靠，用双保险（scrollTo + documentElement.scrollTop） */
+  /* iOS 微信/部分浏览器 window.scrollTo 不可靠，用双保险（scrollTo + documentElement.scrollTop）；
+   * 并强制回到文档顶部，防止返回后停留在旧页面中段导致顶部内容/返回按钮不可见 */
   window.scrollTo(0,0);
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
+  window.scrollTo(0,0);
   if(page === "home") backBtn.style.display = "none";
   else backBtn.style.display = "";
 }
