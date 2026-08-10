@@ -727,13 +727,27 @@ function getVoicesSafe(){
 /* 安全调用：speechSynthesis 不可用时静默跳过（不抛错，页面照常） */
 function ttsCancel(){ try{ if(ttsState() === "ok") window.speechSynthesis.cancel(); }catch(e){} }
 function ttsSpeak(u){ try{ if(ttsState() === "ok") window.speechSynthesis.speak(u); }catch(e){} }
+/* 选择普通话（zh-CN）声音：严格优先中国大陆普通话，排除粤语(zh-HK)/台湾(zh-TW)/澳门/新加坡等方言口音 */
 function pickChineseVoice(){
   if(ttsState() !== "ok") return null;
   var voices = getVoicesSafe();
   if(!voices.length) return null;
-  var prefer = voices.filter(function(v){ return v.lang && v.lang.indexOf("zh") === 0; });
-  var fav = prefer.filter(function(v){ return /xiaoxiao|tingting|meijia|huihui|yaoyao|sinji|female/i.test(v.name); });
-  return (fav[0] || prefer[0] || voices[0]);
+  /* ① 普通话中国大陆声音（zh-CN / zh_CN） */
+  var cn = voices.filter(function(v){ return /^zh[-_]?cn$/i.test(v.lang||""); });
+  if(cn.length){
+    var fav = cn.filter(function(v){ return /xiaoxiao|tingting|ting-ting|meijia|huihui|yaoyao|sinji|female|婷婷|晓晓|普通话/i.test(v.name); });
+    return fav[0] || cn[0];
+  }
+  /* ② 没有 zh-CN：回退到其他中文（仍排除港台/澳门/新加坡粤语与台语），保证尽量普通话口音 */
+  var zh = voices.filter(function(v){
+    return v.lang && v.lang.indexOf("zh") === 0 && !/^zh[-_](hk|tw|mo|sg)/i.test(v.lang);
+  });
+  if(zh.length){
+    var fav2 = zh.filter(function(v){ return /xiaoxiao|tingting|ting-ting|meijia|huihui|yaoyao|sinji|female|婷婷|晓晓|普通话/i.test(v.name); });
+    return fav2[0] || zh[0];
+  }
+  /* ③ 无中文声音：不指定语音，让浏览器按 lang="zh-CN" 自行匹配默认 */
+  return null;
 }
 /* 把讲解词按标点切成句子（不用 lookbehind，兼容性好） */
 function splitScript(text){
