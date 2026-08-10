@@ -50,7 +50,8 @@
   header h1{font-size:20px;font-weight:700;letter-spacing:1px;padding-right:52px;}
   header h1 span{color:var(--accent);}
   header p{font-size:12px;opacity:.8;margin-top:2px;}
-  .back{background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:4px 8px 4px 0;margin-bottom:6px;}
+  .back{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:15px;cursor:pointer;padding:5px 10px;border-radius:9px;margin-bottom:7px;min-height:30px;line-height:1.2;position:relative;z-index:2;}
+  .back:active{background:rgba(255,255,255,.28);}
   #settingsBtn{
     position:absolute;right:12px;top:calc(12px + env(safe-area-inset-top));background:rgba(255,255,255,.16);border:none;color:#fff;
     font-size:18px;width:40px;height:40px;border-radius:12px;cursor:pointer;line-height:1;
@@ -259,7 +260,7 @@
 <body>
 <div id="app">
   <header>
-    <button class="back" id="backBtn" style="display:none;">‹ 返回</button>
+    <button class="back" id="backBtn" aria-label="当前已在首页">‹ 首页</button>
     <h1>📖 全国景点<span>讲解</span></h1>
     <p>随身中文语音导游 · 智能AI补全</p>
     <button id="settingsBtn" title="设置">⚙️</button>
@@ -639,8 +640,16 @@ function go(page){
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0,0);
-  if(page === "home") backBtn.style.display = "none";
-  else backBtn.style.display = "";
+  if(page === "home"){
+    /* 首页也保留返回入口，避免用户在电脑/苹果浏览器上误以为顶部导航消失 */
+    backBtn.style.display = "";
+    backBtn.textContent = "‹ 首页";
+    backBtn.setAttribute("aria-label", "当前已在首页");
+  } else {
+    backBtn.style.display = "";
+    backBtn.textContent = "‹ 返回";
+    backBtn.setAttribute("aria-label", "返回上一页");
+  }
 }
 backBtn.onclick = function(){
   var cur = document.querySelector(".page.active").id;
