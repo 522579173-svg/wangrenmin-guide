@@ -4,12 +4,17 @@
  * 作用：把高德 Web服务 Key 藏在服务器端（环境变量），
  *       前端不再暴露 Key；同时规避浏览器 CORS 限制。
  *
- * 支持两种模式（同一接口，按参数区分）：
+ * 支持四种模式（同一接口，按参数区分）：
  *   ① 逆地理编码：?lat=30.24&lng=120.15
  *      → 返回 { data: { regeocode: { formatted_address, pois[] } } }
- *   ② POI 周边搜索（点击底图反查景点）：
+ *   ② POI 关键词搜索（自动生成景区地图）：
+ *      ?keywords=西湖&city=杭州&offset=25
+ *      → 返回 { data: { poi: { pois: [{name,location,type,cityname,...}], count, suggestion } } }
+ *   ③ POI 周边搜索（点击底图反查景点）：
  *      ?location=116.3970,39.9151&radius=500&offset=25
  *      → 按距离排序返回 { data: { poi: { pois: [{name,location,type,...}], count } } }
+ *   ④ 驾车路线规划：?origin=lng,lat&destination=lng,lat&waypoints=可选
+ *      → 返回 { data: { direction: { distance, duration, polyline, steps[] } } }
  *
  * 配置方法（Vercel）：
  *   Settings → Environment Variables 添加：
@@ -40,7 +45,23 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  /* ② POI 周边搜索模式：?location=116.3970,39.9151&radius=500 */
+  /* ② POI 关键词搜索模式（自动生成景区地图）：?keywords=西湖&city=杭州&offset=25 */
+  if (req.query.keywords) {
+    var keywords = req.query.keywords;
+    var city = req.query.city || "";
+    var offset = parseInt(req.query.offset || "25", 10) || 25;
+    var url = "https://restapi.amap.com/v3/place/text?keywords=" +
+      encodeURIComponent(keywords) +
+      "&key=" + encodeURIComponent(AMAP_KEY) +
+      "&offset=" + offset + "&page=1&extensions=base";
+    if (city) url += "&city=" + encodeURIComponent(city) + "&citylimit=true";
+    var r = await fetch(url);
+    var data = await r.json();
+    res.status(200).json({ source: "amap-proxy", data: { poi: { pois: data.pois || [], count: data.count || 0, suggestion: data.suggestion || {} } } });
+    return;
+  }
+
+  /* ③ POI 周边搜索模式：?location=116.3970,39.9151&radius=500 */
   if (req.query.location) {
     var radius = parseInt(req.query.radius || "500", 10) || 500;
     var offset = parseInt(req.query.offset || "25", 10) || 25;
@@ -57,7 +78,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  /* ③ 驾车路线规划模式：?origin=lng,lat&destination=lng,lat&waypoints=可选(｜分隔) */
+  /* ④ 驾车路线规划模式：?origin=lng,lat&destination=lng,lat&waypoints=可选(｜分隔) */
   if (req.query.origin && req.query.destination) {
     var wps = req.query.waypoints || "";
     var url = "https://restapi.amap.com/v3/direction/driving?origin=" +
