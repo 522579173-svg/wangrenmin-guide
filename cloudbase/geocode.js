@@ -10,6 +10,7 @@
  *    ?keywords=西湖&city=杭州&offset=25
  *    → 返回 { data: { poi: { pois: [{name,location,type,address,...}], count } } }
  *
+
  * 用法：
  *   1. CloudBase 控制台「云函数」→ geocode（已有）→ 编辑代码，粘贴本文件
  *   2. 「配置」→ 环境变量：AMAP_KEY = 你的高德Web服务Key
@@ -106,6 +107,55 @@ exports.main = async (event) => {
         statusCode: 502,
         headers,
         body: JSON.stringify({ error: '高德POI搜索失败: ' + ((e && e.message) || e) })
+      };
+    }
+  }
+
+  /* ---------- ③ POI 周边搜索模式（点击底图反查景点） ---------- */
+  if (q.location) {
+    const location = q.location;
+    const radius = parseInt(q.radius || '200', 10) || 200;
+    const types = q.types || '';
+    const offset = parseInt(q.offset || '20', 10) || 20;
+    const page = parseInt(q.page || '1', 10) || 1; /* 翻页透传：高德around按推荐度排序非距离，前端翻页拉全 */
+    let url = 'https://restapi.amap.com/v3/place/around?location=' +
+      encodeURIComponent(location) +
+      '&key=' + encodeURIComponent(AMAP_KEY) +
+      '&radius=' + radius + '&offset=' + offset + '&page=' + page + '&extensions=base';
+    if (types) {
+      url += '&types=' + encodeURIComponent(types);
+    }
+    try {
+      const r = await httpsGet(url);
+      const d = r.data || {};
+      const pois = (d.pois || []).map(function (p) {
+        return {
+          name: p.name || '',
+          location: p.location || '',
+          type: p.type || '',
+          address: p.address || '',
+          pname: p.pname || '',
+          cityname: p.cityname || '',
+          adname: p.adname || ''
+        };
+      });
+      return {
+        statusCode: r.status,
+        headers,
+        body: JSON.stringify({
+          data: {
+            poi: {
+              pois: pois,
+              count: d.count || 0
+            }
+          }
+        })
+      };
+    } catch (e) {
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({ error: '高德周边搜索失败: ' + ((e && e.message) || e) })
       };
     }
   }
