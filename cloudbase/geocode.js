@@ -111,17 +111,73 @@ exports.main = async (event) => {
     }
   }
 
+
+  /* ---------- ④ 驾车路线规划模式（自驾游：origin→destination，可带 waypoints）
+     extensions=all：steps 带中文转向指示（instruction），供前端导航播报 ---------- */
+  if (q.origin && q.destination) {
+    const origin = q.origin;                       /* "lng,lat" */
+    const destination = q.destination;
+    const waypoints = q.waypoints || '';           /* "lng,lat|lng,lat"，最多3个途经点 */
+    let url = 'https://restapi.amap.com/v3/direction/driving?origin=' +
+      encodeURIComponent(origin) +
+      '&destination=' + encodeURIComponent(destination) +
+      '&key=' + encodeURIComponent(AMAP_KEY) +
+      '&extensions=all&strategy=10';              /* strategy=10：综合最优（推荐） */
+    if (waypoints) {
+      url += '&waypoints=' + encodeURIComponent(waypoints);
+    }
+    try {
+      const r = await httpsGet(url);
+      const d = r.data || {};
+      const route = (d.route && d.route.paths && d.route.paths[0]) || null;
+      /* 导航转向点：每步取 polyline 首点坐标 + 中文转向指示 */
+      const navSteps = (route && route.steps || []).map(function(s){
+        const first = String(s.polyline || '').split(';')[0];
+        const ll = first ? first.split(',') : [];
+        return {
+          instruction: s.instruction || '',
+          lat: ll.length > 1 ? parseFloat(ll[1]) : null,
+          lng: ll.length > 1 ? parseFloat(ll[0]) : null
+        };
+      }).filter(function(s){ return isFinite(s.lat) && isFinite(s.lng); });
+      return {
+        statusCode: r.status,
+        headers,
+        body: JSON.stringify({
+          data: {
+            direction: {
+              distance: route ? (route.distance || 0) : 0,   /* 米 */
+              duration: route ? (route.duration || 0) : 0,   /* 秒 */
+              polyline: route ? (route.steps || '').length ? route.steps.map(function(s){ return s.polyline; }).join(';') : '' : '',
+              steps: navSteps
+            }
+          }
+        })
+      };
+    } catch (e) {
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({ error: '高德驾车路线请求失败: ' + ((e && e.message) || e) })
+      };
+    }
+  }
+
   /* ---------- ③ POI 周边搜索模式（点击底图反查景点） ---------- */
   if (q.location) {
     const location = q.location;
-    const radius = parseInt(q.radius || '200', 10) || 200;
+    const radius = parseInt(q.radius || '500', 10) || 500;
     const types = q.types || '';
-    const offset = parseInt(q.offset || '20', 10) || 20;
-    const page = parseInt(q.page || '1', 10) || 1; /* 翻页透传：高德around按推荐度排序非距离，前端翻页拉全 */
+    const offset = parseInt(q.offset || '25', 10) || 25;
+    const page = parseInt(q.page || '1', 10) || 1;
+    /* sortrule=distance：必须按距离排序！
+       高德 around 默认按"推荐度"排序——实测太和殿坐标反查，太和殿本体排到几十名外，
+       点得再准也拿不到想要的 POI，这是"点不准"的根源。按距离排序后第一页即地理上最近的 25 个 */
     let url = 'https://restapi.amap.com/v3/place/around?location=' +
       encodeURIComponent(location) +
       '&key=' + encodeURIComponent(AMAP_KEY) +
-      '&radius=' + radius + '&offset=' + offset + '&page=' + page + '&extensions=base';
+      '&radius=' + radius + '&offset=' + offset + '&page=' + page +
+      '&sortrule=distance&extensions=base';
     if (types) {
       url += '&types=' + encodeURIComponent(types);
     }
