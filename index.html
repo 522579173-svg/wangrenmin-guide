@@ -1205,10 +1205,10 @@ function reverseGeo(lat, lng){
         });
       return;
     }
+    var done = false, cb = null;
+    function finish(v){ if(done) return; done = true; if(cb) delete window[cb]; resolve(v); }
     if(s.amapKey){
-      var cb = "amap_cb_" + Date.now();
-      var done = false;
-      function finish(v){ if(!done){ done = true; delete window[cb]; resolve(v); } }
+      cb = "amap_cb_" + Date.now();
       window[cb] = function(data){
         try{
           if(data && data.regeocode){
